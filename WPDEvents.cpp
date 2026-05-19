@@ -46,10 +46,10 @@ void WPDUSBDetector::initialize()
     wx.cbSize = sizeof(WNDCLASSEX);
     wx.hInstance = reinterpret_cast<HINSTANCE>(GetModuleHandle(0));
     wx.lpfnWndProc = reinterpret_cast<WNDPROC>(connectedUSBCallback);
-    wx.lpszClassName = CLASS_NAME;
+    wx.lpszClassName = reinterpret_cast<LPCSTR>(CLASS_NAME);
 
     if (RegisterClassEx(&wx)) {
-        m_hWnd = CreateWindowEx(0, CLASS_NAME, CLASS_NAME, 0, 0, 0, 0, 0, NULL, NULL, GetModuleHandle(0), this);
+        m_hWnd = CreateWindowEx(0, wx.lpszClassName, wx.lpszClassName, 0, 0, 0, 0, 0, NULL, NULL, GetModuleHandle(0), this);
 
         if (m_hWnd) {
             DEV_BROADCAST_DEVICEINTERFACE NotificationFilter;

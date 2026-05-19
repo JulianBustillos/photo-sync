@@ -473,8 +473,8 @@ QString MTPFileModel::FormatDate(QString date)
     QString newDate = QString();
 
     if (date.size() == 23) {
-        QVector<QStringRef> YMD = QStringRef(&date, 0, 10).split('/');
-        QVector<QStringRef> HM = QStringRef(&date, 11, 5).split(':');
+        QStringList YMD = date.first(10).split('/');
+        QStringList HM = date.mid(11, 5).split(':');
 
         if (YMD.size() == 3 && HM.size() == 2) {
             newDate += YMD[2] + "/"; //day

@@ -48,11 +48,11 @@ void MTPFileSystem::DirIterator::findNext(const QString & current)
         for (++id; id < content.size() && searching; id++) {
             if (content[id].m_type == WPDManager::ItemType::FILE) {
                 int pointId = content[id].m_name.lastIndexOf('.') + 1;
-                QStringRef currentExtRef(&content[id].m_name, pointId, content[id].m_name.size() - pointId);
+                QString currentExt = content[id].m_name.mid(pointId, content[id].m_name.size() - pointId);
 
                 for (const QString &extension : m_extensions) {
-                    QStringRef filterExtRef(&extension, 2, extension.size() - 2);
-                    if (currentExtRef.compare(filterExtRef, Qt::CaseInsensitive) == 0) {
+                    QString filterExt = extension.mid(2, extension.size() - 2);
+                    if (currentExt.compare(filterExt, Qt::CaseInsensitive) == 0) {
                         splittedPath[level - 1] = content[id].m_name;
                         searching = false;
                         break;
@@ -126,7 +126,8 @@ int MTPFileSystem::FileInfo::size() const
 
 bool MTPFileSystem::FileInfo::exists() const
 {
-    return WPDInstance::get().getItem(m_path, WPDManager::Item());
+    WPDManager::Item item;
+    return WPDInstance::get().getItem(m_path, item);
 }
 
 
@@ -219,7 +220,8 @@ QString MTPFileSystem::Dir::path(const QString &concatenate) const
 
 bool MTPFileSystem::Dir::exists() const
 {
-    return WPDInstance::get().getItem(m_path, WPDManager::Item());
+    WPDManager::Item item;
+    return WPDInstance::get().getItem(m_path, item);
 }
 
 bool MTPFileSystem::Dir::mkpath(const QString & dirPath) const
@@ -230,9 +232,10 @@ bool MTPFileSystem::Dir::mkpath(const QString & dirPath) const
     bool created = true;
     int index = 0;
     QString existingPath = m_path;
+    WPDManager::Item item;
     while (index < folders.size() && created) {
         QString pathToCreate = existingPath + "/" + folders[index];
-        if (!WPDInstance::get().getItem(pathToCreate, WPDManager::Item()))
+        if (!WPDInstance::get().getItem(pathToCreate, item))
             created = WPDInstance::get().createFolder(existingPath, folders[index]);
         existingPath = pathToCreate;
         index++;

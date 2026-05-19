@@ -5,7 +5,7 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QDir>
-#include <QStringRef>
+#include <QString>
 
 
 /* ExtendedFileSystem::Path */

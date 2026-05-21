@@ -22,7 +22,7 @@ PhotoSync::PhotoSync(QWidget *parent)
         m_settings->getConfig(importPath, exportPath, remove);
         m_ui.importEdit->setText(importPath);
         m_ui.exportEdit->setText(exportPath);
-        m_ui.removeCheckBox->setChecked(remove);
+        m_ui.deleteCheckBox->setChecked(remove);
     }
 
     QObject::connect(m_ui.importToolButton, &QToolButton::clicked, this, &PhotoSync::askImportFolder);
@@ -82,14 +82,14 @@ void PhotoSync::askExportFolder()
 void PhotoSync::run()
 {
     if (m_settings)
-        m_settings->setConfig(m_ui.importEdit->text(), m_ui.exportEdit->text(), m_ui.removeCheckBox->isChecked());
+        m_settings->setConfig(m_ui.importEdit->text(), m_ui.exportEdit->text(), m_ui.deleteCheckBox->isChecked());
     
     if (m_fileManager) {
         QObject::disconnect(m_ui.positivePushButton, nullptr, nullptr, nullptr);
         QObject::connect(m_ui.positivePushButton, &QToolButton::clicked, m_fileManager, &FileManager::cancel);
         m_ui.positivePushButton->setText("Cancel");
 
-        m_fileManager->setSettings(m_ui.importEdit->text(), m_ui.exportEdit->text(), m_ui.removeCheckBox->isChecked());
+        m_fileManager->setSettings(m_ui.importEdit->text(), m_ui.exportEdit->text(), m_ui.deleteCheckBox->isChecked());
         m_fileManager->start(QThread::NormalPriority);
     }
 }

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>505</width>
-    <height>314</height>
+    <height>323</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -60,12 +60,12 @@
         <widget class="QLineEdit" name="exportEdit"/>
        </item>
        <item row="2" column="1">
-        <widget class="QCheckBox" name="removeCheckBox">
+        <widget class="QCheckBox" name="deleteCheckBox">
          <property name="enabled">
           <bool>true</bool>
          </property>
          <property name="text">
-          <string>Remove copied files</string>
+          <string>Delete files once copy is complete</string>
          </property>
          <property name="tristate">
           <bool>false</bool>
@@ -90,7 +90,7 @@
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>

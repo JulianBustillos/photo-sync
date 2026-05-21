@@ -1,6 +1,6 @@
 #include "PhotoSync.h"
-#include <QApplication>
 #include "NodeContainer.h"
+#include <QApplication>
 
 
 int main(int argc, char *argv[])

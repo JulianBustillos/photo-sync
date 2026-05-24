@@ -58,7 +58,7 @@ void FileManager::run()
             emit output(QString());
 
         emit output("FROM : " + m_importDir.absolutePath());
-        emit output("TO      : " + m_exportDir.absolutePath());
+        emit output("TO       : " + m_exportDir.absolutePath());
         
         m_duplicateCount = 0;
         m_copyCount = 0;

@@ -114,7 +114,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DateParser.h" />
-    <ClInclude Include="easyexif\exif.h" />
     <ClInclude Include="FileData.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Settings.h" />

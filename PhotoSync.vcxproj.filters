@@ -61,9 +61,6 @@
     <ClInclude Include="FileData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="easyexif\exif.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DateParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>

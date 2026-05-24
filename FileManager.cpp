@@ -1,12 +1,13 @@
 #include "FileManager.h"
-#include <QCryptographicHash>
 #include "DateParser.h"
+#include <QCryptographicHash>
+#include <QDirIterator>
 
 #define MAX_NAME_INDEX 100
 
 
 FileManager::FileManager(QObject *parent) :
-    QThread(parent), m_importPath(""), m_exportPath(""), m_extensions({ "*.jpg" , "*.jpeg", "*.png", "*.mp4" }), m_cancelled(false), m_status(false), m_removeFiles(false),
+    QThread(parent), m_extensions({ "*.jpg" , "*.jpeg", "*.png", "*.mp4" }), m_cancelled(false), m_status(false), m_removeFiles(false),
     m_runCount(0), m_progress(0), m_copyProgress(0), m_removeProgress(0), m_duplicateCount(0), m_copyCount(0), m_removeCount(0)
 {
 }
@@ -19,8 +20,8 @@ FileManager::~FileManager()
 
 void FileManager::setSettings(const QString & importPath, const QString & exportPath, bool removeFiles)
 {
-    m_importPath = importPath;
-    m_exportPath = exportPath;
+    m_importDir = QDir(importPath);
+    m_exportDir = QDir(exportPath);
     m_removeFiles = removeFiles;
 }
 
@@ -56,8 +57,8 @@ void FileManager::run()
         if (m_runCount++)
             emit output(QString());
 
-        emit output("FROM : " + m_importPath.toQString());
-        emit output("TO      : " + m_exportPath.toQString());
+        emit output("FROM : " + m_importDir.absolutePath());
+        emit output("TO      : " + m_exportDir.absolutePath());
         
         m_duplicateCount = 0;
         m_copyCount = 0;
@@ -80,26 +81,26 @@ void FileManager::run()
         printElapsedTime(startTime, endTime);
     }
 
-    m_status &= !m_cancelled.loadRelaxed();
+    m_status = m_status && !m_cancelled.loadRelaxed();
 }
 
 bool FileManager::checkDir()
 {
-    if (m_importPath.isEmpty()) {
+    if (m_importDir.isEmpty()) {
         emit warning("Path error", "Import path is empty !", false);
         return false;
     }
-    if (!EFS::Dir(m_importPath).exists()) {
-        emit warning("Path error", "Import path : \"" + m_importPath.toQString() + "\" not found !", false);
+    if (!m_importDir.exists()) {
+        emit warning("Path error", "Import path : \"" + m_importDir.absolutePath() + "\" not found !", false);
         return false;
     }
 
-    if (m_exportPath.isEmpty()) {
+    if (m_exportDir.isEmpty()) {
         emit warning("Path error", "Export path is empty !", false);
         return false;
     }
-    if (!EFS::Dir(m_exportPath).exists()) {
-        emit warning("Path error", "Export path : \"" + m_exportPath.toQString() + "\" not found !", false);
+    if (!m_exportDir.exists()) {
+        emit warning("Path error", "Export path : \"" + m_exportDir.absolutePath() + "\" not found !", false);
         return false;
     }
 
@@ -117,14 +118,14 @@ bool FileManager::checkRemove()
     return true;
 }
 
-bool FileManager::getDate(const EFS::FileInfo &fileInfo, Date &date)
+bool FileManager::getDate(const QFileInfo &fileInfo, Date &date)
 {
     bool isParsed = false;
     bool tryFileName = false;
 
     if (fileInfo.suffix().compare("jpg", Qt::CaseInsensitive) == 0 
         || fileInfo.suffix().compare("jpeg", Qt::CaseInsensitive) == 0) {
-        EFS::File file(fileInfo.path());
+        QFile file(fileInfo.absoluteFilePath());
         if (file.open(QIODevice::ReadOnly)) {
             tryFileName = !DateParser::fromJPGBuffer(file.readAll(), date);
             file.close();
@@ -136,7 +137,7 @@ bool FileManager::getDate(const EFS::FileInfo &fileInfo, Date &date)
         isParsed = true;
     }
     else if (fileInfo.suffix().compare("mp4", Qt::CaseInsensitive) == 0) {
-        EFS::File file(fileInfo.path());
+        QFile file(fileInfo.absoluteFilePath());
         if (file.open(QIODevice::ReadOnly)) {
             tryFileName = !DateParser::fromMP4Buffer(file.readAll(), date);
             file.close();
@@ -153,23 +154,23 @@ bool FileManager::getDate(const EFS::FileInfo &fileInfo, Date &date)
 
 void FileManager::buildExistingFileData()
 {
-    EFS::DirIterator it(m_exportPath, m_extensions);
+    QDirIterator it(m_exportDir.absolutePath(), m_extensions, QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         if (m_cancelled.loadRelaxed())
             return;
 
-        EFS::FileInfo fileInfo(it.next());
-        m_existingFiles[fileInfo.size()].emplace_back(fileInfo.path());
+        QFileInfo fileInfo(it.next());
+        m_existingFiles[fileInfo.size()].emplace_back(fileInfo);
     }
 }
 
 void FileManager::buildImportFileData()
 {
-    EFS::DirIterator it(m_importPath, m_extensions);
-    QVector<EFS::Path> importFilePaths;
+    QDirIterator it(m_importDir.absolutePath(), m_extensions, QDir::Files, QDirIterator::Subdirectories);
+    QVector<QFileInfo> importFilePaths;
 
     while (it.hasNext())
-        importFilePaths.append(it.next());
+        importFilePaths.append(QFileInfo(it.next()));
 
     int progressSize;
     if (m_removeFiles) {
@@ -188,19 +189,18 @@ void FileManager::buildImportFileData()
     else
         emit progressBarMaximum(progressSize);
 
-    for (EFS::Path &filePath : importFilePaths) {
+    for (QFileInfo &fileInfo : importFilePaths) {
         if (m_cancelled.loadRelaxed())
             return;
 
         bool copyFile = true;
 
-        EFS::FileInfo fileInfo(filePath);
         auto filesIt = m_existingFiles.find(fileInfo.size());
         if (filesIt != m_existingFiles.end()) {
             QCryptographicHash hash(QCryptographicHash::Md5);
-            EFS::File newFile(fileInfo.path());
+            QFile newFile(fileInfo.absoluteFilePath());
             if (!newFile.open(QIODevice::ReadOnly)) {
-                m_importErrors.insert(fileInfo.path());
+                m_importErrors.insert(fileInfo.absoluteFilePath());
                 addToProgress(m_copyProgress + m_removeProgress);
                 continue;
             }
@@ -208,11 +208,11 @@ void FileManager::buildImportFileData()
             QByteArray newFileChecksum = hash.result();
             newFile.close();
 
-            for (auto &fileData : filesIt->second) {
+            for (ExistingFile &fileData : filesIt->second) {
                 if (fileData.m_checksum.isEmpty()) {
-                    EFS::File existingFile(fileData.m_path.toQString());
+                    QFile existingFile(fileData.m_info.absoluteFilePath());
                     if (!existingFile.open(QIODevice::ReadOnly)) {
-                        m_exportErrors.insert(fileData.m_path);
+                        m_exportErrors.insert(fileData.m_info.absoluteFilePath());
                         continue;
                     }
 
@@ -233,16 +233,16 @@ void FileManager::buildImportFileData()
         if (copyFile) {
             Date date;
             if (!getDate(fileInfo, date)) {
-                m_importErrors.insert(fileInfo.path());
+                m_importErrors.insert(fileInfo.absoluteFilePath());
                 addToProgress(m_copyProgress + m_removeProgress);
                 continue;
             }
             m_DirectoriesToCreate.insert(date);
-            m_filesToCopy.emplace_back(date, fileInfo.path());
+            m_filesToCopy.emplace_back(fileInfo, date);
         }
         else {
             if (m_removeFiles)
-                m_filesToRemove.push_back(filePath);
+                m_filesToRemove.push_back(fileInfo);
             addToProgress(m_copyProgress);
         }
 
@@ -251,19 +251,16 @@ void FileManager::buildImportFileData()
 
 void FileManager::exportFiles()
 {
-    EFS::Dir exportPath(m_exportPath);
-
     for (auto &date : m_DirectoriesToCreate) {
-        exportPath.mkpath(date.toQString());
+        m_exportDir.mkpath(date.toQString());
     }
 
-    for (auto &file : m_filesToCopy) {
+    for (ExportFile &fileToCopy : m_filesToCopy) {
         if (m_cancelled.loadRelaxed())
             return;
 
-        EFS::FileInfo importFileInfo(file.m_path);
-        QString fileName = importFileInfo.fileName();
-        EFS::FileInfo exportFileInfo(exportPath.path(file.m_date.toQString() + "/" + fileName));
+        QString fileName = fileToCopy.m_info.fileName();
+        QFileInfo exportFileInfo(m_exportDir.absolutePath() + fileToCopy.m_date.toQString() + "/" + fileName);
         
         int count = 0;
         bool copy = false;
@@ -278,8 +275,8 @@ void FileManager::exportFiles()
         }
 
         if (count < MAX_NAME_INDEX) {
-            EFS::File importFile(importFileInfo.path());
-            EFS::File exportFile(exportFileInfo.path());
+            QFile importFile(fileToCopy.m_info.absoluteFilePath());
+            QFile exportFile(exportFileInfo.absoluteFilePath());
 
             if (importFile.open(QIODevice::ReadOnly) && exportFile.open(QIODevice::WriteOnly))
                 copy = (exportFile.write(importFile.readAll()) >= 0);
@@ -291,11 +288,11 @@ void FileManager::exportFiles()
         if (copy) {
             m_copyCount++;
             if (m_removeFiles)
-                m_filesToRemove.push_back(importFileInfo.path());
+                m_filesToRemove.push_back(fileToCopy.m_info);
             addToProgress(m_copyProgress);
         }
         else {
-            m_importErrors.insert(importFileInfo.path());
+            m_importErrors.insert(fileToCopy.m_info.absoluteFilePath());
             addToProgress(m_copyProgress + m_removeProgress);
         }
 
@@ -305,18 +302,13 @@ void FileManager::exportFiles()
 
 void FileManager::removeFiles()
 {
-    QVector<EFS::Path> paths;
-    QVector<bool> results;
-
-    for (EFS::Path& path : m_filesToRemove)
-        paths.append(path);
-
-    EFS::File::remove(paths, results);
-    for (int i = 0; i < results.size(); i++) {
-        if (results[i])
+    for (QFileInfo& fileToRemove : m_filesToRemove)
+    {
+        QFile file(fileToRemove.absoluteFilePath());
+        if (file.remove())
             m_removeCount++;
         else
-            m_importErrors.insert(paths[i]);
+            m_importErrors.insert(fileToRemove.absoluteFilePath());
 
         addToProgress(m_removeProgress);
     }

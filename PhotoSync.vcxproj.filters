@@ -50,49 +50,10 @@
     <ClCompile Include="easyexif\exif.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FileExplorerDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MTPFileModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MTPFileNode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WPDManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MTPFileFetcher.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FileSystemProxyModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AggregableProxyModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AggregateModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AggregateRootModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DateParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ExtendedFileSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MTPFileSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WPDEvents.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Settings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WPDInstance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -103,73 +64,20 @@
     <ClInclude Include="easyexif\exif.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MTPFileNode.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MTPFileNodePathKey.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WPDManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NodeContainer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AggregableProxyModel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AggregateModel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DateParser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ExtendedFileSystem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MTPFileSystem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WPDEvents.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WPDInstance.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="FileExplorerDialog.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="MTPFileFetcher.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="MTPFileModel.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="AggregableItemModel.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="FileSystemProxyModel.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="AggregateRootModel.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
     <QtMoc Include="FileManager.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-  </ItemGroup>
-  <ItemGroup>
-    <QtUic Include="FileExplorerDialog.ui">
-      <Filter>Resource Files</Filter>
-    </QtUic>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PhotoSync.rc">

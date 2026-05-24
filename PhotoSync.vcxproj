@@ -101,53 +101,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AggregableProxyModel.cpp" />
-    <ClCompile Include="AggregateModel.cpp" />
-    <ClCompile Include="AggregateRootModel.cpp" />
     <ClCompile Include="DateParser.cpp" />
-    <ClCompile Include="ExtendedFileSystem.cpp" />
-    <ClCompile Include="FileSystemProxyModel.cpp" />
-    <ClCompile Include="MTPFileFetcher.cpp" />
-    <ClCompile Include="MTPFileSystem.cpp" />
     <ClCompile Include="Settings.cpp" />
-    <ClCompile Include="WPDEvents.cpp" />
-    <ClCompile Include="WPDInstance.cpp" />
-    <ClCompile Include="WPDManager.cpp" />
     <QtRcc Include="PhotoSync.qrc" />
-    <QtUic Include="FileExplorerDialog.ui" />
     <QtUic Include="PhotoSync.ui" />
     <QtMoc Include="PhotoSync.h" />
     <ClCompile Include="easyexif\exif.cpp" />
     <ClCompile Include="FileData.cpp" />
-    <ClCompile Include="FileExplorerDialog.cpp" />
     <ClCompile Include="FileManager.cpp" />
-    <ClCompile Include="MTPFileModel.cpp" />
-    <ClCompile Include="MTPFileNode.cpp" />
     <ClCompile Include="PhotoSync.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="AggregableItemModel.h" />
-    <ClInclude Include="AggregableProxyModel.h" />
-    <ClInclude Include="AggregateModel.h" />
-    <QtMoc Include="AggregateRootModel.h" />
     <ClInclude Include="DateParser.h" />
     <ClInclude Include="easyexif\exif.h" />
-    <ClInclude Include="ExtendedFileSystem.h" />
     <ClInclude Include="FileData.h" />
-    <QtMoc Include="MTPFileFetcher.h" />
-    <QtMoc Include="MTPFileModel.h" />
-    <QtMoc Include="FileSystemProxyModel.h" />
-    <ClInclude Include="MTPFileNode.h" />
-    <ClInclude Include="MTPFileNodePathKey.h" />
-    <ClInclude Include="MTPFileSystem.h" />
-    <ClInclude Include="NodeContainer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Settings.h" />
-    <ClInclude Include="WPDEvents.h" />
-    <ClInclude Include="WPDInstance.h" />
-    <ClInclude Include="WPDManager.h" />
-    <QtMoc Include="FileExplorerDialog.h" />
     <QtMoc Include="FileManager.h" />
   </ItemGroup>
   <ItemGroup>

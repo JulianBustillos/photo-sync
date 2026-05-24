@@ -2,12 +2,13 @@
 #include <QThread>
 #include <QMutex>
 #include <QWaitCondition>
+#include <QDir>
+#include <QFileInfo>
 #include <unordered_map>
 #include <vector>
 #include <set>
 #include <chrono>
 #include "FileData.h"
-#include "ExtendedFileSystem.h"
 
 
 class FileManager : public QThread
@@ -38,7 +39,7 @@ private:
 private:
     bool checkDir();
     bool checkRemove();
-    bool getDate(const EFS::FileInfo &fileInfo, Date &date);
+    bool getDate(const QFileInfo &fileInfo, Date &date);
     void buildExistingFileData();
     void buildImportFileData();
     void exportFiles();
@@ -53,8 +54,8 @@ private:
     QAtomicInt m_cancelled;
 
 private:
-    EFS::Path m_importPath;
-    EFS::Path m_exportPath;
+    QDir m_importDir;
+    QDir m_exportDir;
     bool m_removeFiles;
     const QStringList m_extensions;
     int m_runCount;
@@ -64,11 +65,11 @@ private:
     std::unordered_map<qint64, std::vector<ExistingFile>> m_existingFiles;
     std::set<Date> m_DirectoriesToCreate;
     std::vector<ExportFile> m_filesToCopy;
-    std::vector<EFS::Path> m_filesToRemove;
-    std::set<EFS::Path> m_importErrors;
-    std::set<EFS::Path> m_exportErrors;
+    std::vector<QFileInfo> m_filesToRemove;
+    std::set<QString> m_importErrors;
+    std::set<QString> m_exportErrors;
     int m_duplicateCount;
     int m_copyCount;
     int m_removeCount;
-    int m_status;
+    bool m_status;
 };

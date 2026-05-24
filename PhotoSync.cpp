@@ -1,10 +1,12 @@
 #include "PhotoSync.h"
-#include "WPDInstance.h"
+#include <QCoreApplication>
+#include <QToolButton>
 #include <QMessageBox>
+#include <QFileDialog>
 
 
 PhotoSync::PhotoSync(QWidget *parent)
-    : QMainWindow(parent), m_settings(nullptr), m_fileDialog(nullptr), m_fileManager(nullptr)
+    : QMainWindow(parent), m_settings(nullptr), m_fileManager(nullptr)
 {
     m_ui.setupUi(this);
     m_ui.progressBar->setValue(0);
@@ -12,7 +14,6 @@ PhotoSync::PhotoSync(QWidget *parent)
     m_positiveDefaultText = m_ui.positivePushButton->text();
 
     m_settings = new Settings(QCoreApplication::applicationDirPath());
-    m_fileDialog = new FileExplorerDialog(this);
     m_fileManager = new FileManager(this);
 
     if (m_settings && m_settings->parseConfigFile()) {
@@ -25,8 +26,8 @@ PhotoSync::PhotoSync(QWidget *parent)
         m_ui.deleteCheckBox->setChecked(remove);
     }
 
-    QObject::connect(m_ui.importToolButton, &QToolButton::clicked, this, &PhotoSync::askImportFolder);
-    QObject::connect(m_ui.exportToolButton, &QToolButton::clicked, this, &PhotoSync::askExportFolder);
+    QObject::connect(m_ui.importToolButton, &QToolButton::clicked, this, [&]() { askDirectory("Import directory path", *m_ui.importEdit); });
+    QObject::connect(m_ui.exportToolButton, &QToolButton::clicked, this, [&]() { askDirectory("Export directory path", *m_ui.exportEdit); });
     QObject::connect(m_ui.positivePushButton, &QToolButton::clicked, this, &PhotoSync::run);
     QObject::connect(m_ui.negativePushButton, &QToolButton::clicked, this, &PhotoSync::close);
 
@@ -46,37 +47,17 @@ PhotoSync::~PhotoSync()
         delete m_fileManager;
     m_fileManager = nullptr;
 
-    if (m_fileDialog)
-        delete m_fileDialog;
-    m_fileDialog = nullptr;
-
     if (m_settings)
         delete m_settings;
     m_settings = nullptr;
-
-    WPDInstance::free();
 }
 
-void PhotoSync::askImportFolder()
+void PhotoSync::askDirectory(QString title, QLineEdit& lineEdit)
 {
-    if (m_fileDialog) {
-        m_fileDialog->setWindowTitle("Import directory path");
-        m_fileDialog->setDirectory(m_ui.importEdit->text());
-        int code = m_fileDialog->exec();
-        if (code == QDialog::Accepted)
-            m_ui.importEdit->setText(m_fileDialog->getDirectory());
-    }
-}
-
-void PhotoSync::askExportFolder()
-{
-    if (m_fileDialog) {
-        m_fileDialog->setWindowTitle("Export directory path");
-        m_fileDialog->setDirectory(m_ui.exportEdit->text());
-        int code = m_fileDialog->exec();
-        if (code == QDialog::Accepted)
-            m_ui.exportEdit->setText(m_fileDialog->getDirectory());
-    }
+    QString startDir = !lineEdit.text().isEmpty() ? lineEdit.text() : QDir::homePath();
+    QString selectedDir = QFileDialog::getExistingDirectory(this, title, startDir);
+    if (!selectedDir.isEmpty())
+        lineEdit.setText(selectedDir);
 }
 
 void PhotoSync::run()

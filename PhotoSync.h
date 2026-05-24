@@ -1,10 +1,9 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QLineEdit>
 #include "ui_PhotoSync.h"
 #include "Settings.h"
-#include "WPDManager.h"
-#include "FileExplorerDialog.h"
 #include "FileManager.h"
 
 class PhotoSync : public QMainWindow
@@ -17,8 +16,7 @@ public:
     ~PhotoSync();
 
 private :
-    void askImportFolder();
-    void askExportFolder();
+    void askDirectory(QString title, QLineEdit& lineEdit);
     void run();
 
 private slots:
@@ -35,6 +33,5 @@ private:
     Ui::PhotoSyncClass m_ui;
     QString m_positiveDefaultText;
     Settings *m_settings;
-    FileExplorerDialog *m_fileDialog;
     FileManager *m_fileManager;
 };

@@ -1,7 +1,7 @@
 #pragma once
 #include <QString>
+#include <QFileInfo>
 #include <QByteArray>
-#include "ExtendedFileSystem.h"
 
 
 struct Date {
@@ -15,15 +15,15 @@ struct Date {
 bool operator<(const Date &lhs, const Date &rhs);
 
 struct ExistingFile {
-    const EFS::Path m_path;
+    const QFileInfo m_info;
     QByteArray m_checksum;
 
-    ExistingFile(const EFS::Path &path) : m_path(path) {};
+    ExistingFile(const QFileInfo &info) : m_info(info) {};
 };
 
 struct ExportFile {
+    const QFileInfo m_info;
     const Date m_date;
-    const EFS::Path m_path;
 
-    ExportFile(const Date &date, const EFS::Path &path) : m_date(date), m_path(path) {};
+    ExportFile(const QFileInfo& info, const Date &date) : m_info(info), m_date(date) {};
 };

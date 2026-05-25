@@ -19,7 +19,7 @@ target_include_directories(easyexif PUBLIC
     easyexif
 )
 
-add_executable(PhotoSync
+add_executable(PhotoSync WIN32
     src/main.cpp
     src/DateParser.hpp
     src/DateParser.cpp

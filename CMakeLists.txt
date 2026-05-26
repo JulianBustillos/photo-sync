@@ -32,6 +32,8 @@ add_executable(PhotoSync WIN32
     src/Settings.hpp
     src/Settings.cpp
     src/PhotoSync.ui
+
+    resources/PhotoSync.rc
 )
 
 target_include_directories(PhotoSync PRIVATE

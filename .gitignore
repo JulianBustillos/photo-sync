@@ -1,0 +1,97 @@
+# =========================================
+# Build directories
+# =========================================
+
+build/
+out/
+bin/
+
+
+# =========================================
+# CMake
+# =========================================
+
+CMakeUserPresets.json
+
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+CTestTestfile.cmake
+Testing/
+
+Makefile
+
+
+# =========================================
+# Ninja
+# =========================================
+
+.ninja_deps
+.ninja_log
+build.ninja
+
+
+# =========================================
+# Visual Studio / MSVC
+# =========================================
+
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.pch
+*.lib
+*.exp
+
+*.exe
+*.dll
+
+*.vcxproj*
+*.sln
+
+
+# =========================================
+# VS Code
+# =========================================
+
+.vscode/*
+
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Binaries
+*.exe
+*.dll
+*.lib
+*.obj
+*.pdb
+*.ilk
+*.exp
+
+
+
+# =========================================
+# Qt
+# =========================================
+
+*.qmlc
+*.jsc
+*.rcc
+moc_*
+qrc_*
+ui_*.h
+
+.autosave
+
+
+# =========================================
+# OS
+# =========================================
+
+.DS_Store
+Thumbs.db

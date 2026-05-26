@@ -11,9 +11,15 @@
             "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
+            "architecture": {
+                "value": "x64"
+            },
+            "toolset": {
+                "value": "host=x64"
+            },
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_PREFIX_PATH": "C:/SDKs/Qt/6.11.1/msvc2022_64"
+                "CMAKE_PREFIX_PATH": "$env{QTDIR}"
             }
         },
         {

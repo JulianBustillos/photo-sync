@@ -1,5 +1,6 @@
 {
     "cmake.generator": "Ninja",
+    "cmake.useVsDeveloperEnvironment": "always",
     "cmake.useCMakePresets": "always",
     "cmake.configureOnOpen": true,
     "cmake.buildBeforeRun": true,

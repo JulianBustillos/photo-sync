@@ -7,8 +7,7 @@ PhotoSync::PhotoSync(QWidget *parent)
       m_fileManager(this) {
   m_ui.setupUi(this);
   m_ui.progressBar->setValue(0);
-
-  m_positiveDefaultText = m_ui.positivePushButton->text();
+  m_ui.startButton->setText("Start");
 
   if (m_settings.parseConfigFile()) {
     QString importPath, exportPath;
@@ -26,10 +25,8 @@ PhotoSync::PhotoSync(QWidget *parent)
   QObject::connect(m_ui.exportToolButton, &QToolButton::clicked, this, [&]() {
     selectDirectory("Export directory path", *m_ui.exportEdit);
   });
-  QObject::connect(m_ui.positivePushButton, &QToolButton::clicked, this,
+  QObject::connect(m_ui.startButton, &QToolButton::clicked, this,
                    &PhotoSync::run);
-  QObject::connect(m_ui.negativePushButton, &QToolButton::clicked, this,
-                   &PhotoSync::close);
 
   QObject::connect(&m_fileManager, &FileManager::warning, this,
                    &PhotoSync::createWarning);
@@ -60,10 +57,10 @@ void PhotoSync::run() {
   m_settings.setConfig(m_ui.importEdit->text(), m_ui.exportEdit->text(),
                        m_ui.deleteCheckBox->isChecked());
 
-  QObject::disconnect(m_ui.positivePushButton, nullptr, nullptr, nullptr);
-  QObject::connect(m_ui.positivePushButton, &QToolButton::clicked,
-                   &m_fileManager, &FileManager::cancel);
-  m_ui.positivePushButton->setText("Cancel");
+  QObject::disconnect(m_ui.startButton, nullptr, nullptr, nullptr);
+  QObject::connect(m_ui.startButton, &QToolButton::clicked, &m_fileManager,
+                   &FileManager::cancel);
+  m_ui.startButton->setText("Cancel");
 
   m_fileManager.setSettings(m_ui.importEdit->text(), m_ui.exportEdit->text(),
                             m_ui.deleteCheckBox->isChecked());
@@ -91,10 +88,10 @@ void PhotoSync::appendOutput(QString output) {
 }
 
 void PhotoSync::finish() {
-  QObject::disconnect(m_ui.positivePushButton, nullptr, nullptr, nullptr);
-  QObject::connect(m_ui.positivePushButton, &QToolButton::clicked, this,
+  QObject::disconnect(m_ui.startButton, nullptr, nullptr, nullptr);
+  QObject::connect(m_ui.startButton, &QToolButton::clicked, this,
                    &PhotoSync::run);
-  m_ui.positivePushButton->setText(m_positiveDefaultText);
+  m_ui.startButton->setText("Start");
 
   if (m_fileManager.getStatus())
     m_settings.exportConfigFile();

@@ -30,7 +30,6 @@ signals:
 
 private:
   Ui::PhotoSyncClass m_ui;
-  QString m_positiveDefaultText;
   Settings m_settings;
   FileManager m_fileManager;
 };

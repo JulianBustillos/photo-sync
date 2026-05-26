@@ -14,7 +14,7 @@
    <string>PhotoSync</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="PhotoSync.qrc">
+   <iconset>
     <normaloff>:/PhotoSync/PhotoSync.png</normaloff>:/PhotoSync/PhotoSync.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
@@ -81,13 +81,6 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QPushButton" name="negativePushButton">
-        <property name="text">
-         <string>Exit</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
@@ -101,9 +94,9 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="positivePushButton">
+       <widget class="QPushButton" name="startButton">
         <property name="text">
-         <string>Go!</string>
+         <string>Start</string>
         </property>
        </widget>
       </item>

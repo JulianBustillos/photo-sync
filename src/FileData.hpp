@@ -1,10 +1,10 @@
 #pragma once
-#include <QString>
-#include <QFileInfo>
 #include <QByteArray>
+#include <QFileInfo>
+#include <QString>
 
-
-struct Date {
+struct Date
+{
     int m_year;
     int m_month;
 
@@ -14,16 +14,18 @@ struct Date {
 
 bool operator<(const Date &lhs, const Date &rhs);
 
-struct ExistingFile {
+struct ExistingFile
+{
     const QFileInfo m_info;
     QByteArray m_checksum;
 
     ExistingFile(const QFileInfo &info) : m_info(info) {};
 };
 
-struct ExportFile {
+struct ExportFile
+{
     const QFileInfo m_info;
     const Date m_date;
 
-    ExportFile(const QFileInfo& info, const Date &date) : m_info(info), m_date(date) {};
+    ExportFile(const QFileInfo &info, const Date &date) : m_info(info), m_date(date) {};
 };

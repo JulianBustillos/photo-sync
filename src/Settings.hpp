@@ -1,27 +1,28 @@
 #pragma once
 #include <QString>
 
-class Settings
-{
-  public:
-    static const QString ConfigFilename;
-    static const QString ImportKey;
-    static const QString ExportKey;
-    static const QString DeleteKey;
+class Settings {
+private:
+    static const QString config_filename;
+    static const QString import_key;
+    static const QString export_key;
+    static const QString delete_key;
 
-  public:
-    Settings(const QString &executablePath);
-    ~Settings();
+public:
+    Settings(const QString& executable_path);
 
-  public:
-    bool parseConfigFile();
-    bool exportConfigFile() const;
-    void setConfig(const QString &importPath, const QString &exportPath, bool deleteFiles);
-    void getConfig(QString &importPath, QString &exportPath, bool &deleteFiles) const;
+    bool parse_config_file();
+    void export_config_file() const;
+    void set_import_path(const QString& import_path);
+    void set_export_path(const QString& export_path);
+    void set_delete_files(bool delete_files);
+    [[nodiscard]] QString get_import_path() const;
+    [[nodiscard]] QString get_export_path() const;
+    [[nodiscard]] bool get_delete_files() const;
 
-  public:
-    const QString m_configPath;
-    QString m_importPath;
-    QString m_exportPath;
-    bool m_deleteFiles;
+private:
+    QString config_path_;
+    QString import_path_;
+    QString export_path_;
+    bool delete_files_;
 };

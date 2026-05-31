@@ -1,15 +1,15 @@
 #include "FileData.hpp"
 
-bool operator<(const Date &lhs, const Date &rhs)
-{
-    if (lhs.m_year != rhs.m_year)
-        return lhs.m_year < rhs.m_year;
-    return lhs.m_month < rhs.m_month;
+bool operator<(const Date& lhs, const Date& rhs) {
+    if (lhs.year != rhs.year) {
+        return lhs.year < rhs.year;
+    }
+    return lhs.month < rhs.month;
 }
 
-QString Date::toQString() const
-{
-    if (m_year <= 0 && m_month <= 0)
-        return QString("NO_DATE");
-    return QString::number(m_year) + "\\" + QString::number(m_month).rightJustified(2, '0');
+QString Date::to_qstring() const {
+    if (year <= 0 && month <= 0) {
+        return {"NO_DATE"};
+    }
+    return QString::number(year) + "\\" + QString::number(month).rightJustified(2, '0');
 }

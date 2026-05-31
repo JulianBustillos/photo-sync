@@ -1,161 +1,154 @@
 #include "DateParser.hpp"
+
 #include "exif.h"
 
-extern "C"
-{
+extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/dict.h>
 }
 
-bool DateParser::fromJPGBuffer(const QByteArray &buffer, Date &date)
-{
-    bool dateFound = false;
-    easyexif::EXIFInfo exifInfo;
-    int parsingResult =
-        exifInfo.parseFrom((const unsigned char *)buffer.constData(), buffer.size());
-    if (parsingResult == PARSE_EXIF_SUCCESS && exifInfo.DateTime.size() >= 7)
-    {
-        date.m_year = std::stoi(exifInfo.DateTime.substr(0, 4));
-        date.m_month = std::stoi(exifInfo.DateTime.substr(5, 2));
-        dateFound = true;
+bool date_parser::from_jpg_buffer(const QByteArray& buffer, Date& date) {
+    bool date_found = false;
+    easyexif::EXIFInfo exif_info;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    const auto* data = reinterpret_cast<const unsigned char*>(buffer.constData());
+    int parsing_result = exif_info.parseFrom(data, buffer.size());
+    if (parsing_result == PARSE_EXIF_SUCCESS && exif_info.DateTime.size() >= 7) {
+        date.year = std::stoi(exif_info.DateTime.substr(0, 4));
+        date.month = std::stoi(exif_info.DateTime.substr(5, 2));
+        date_found = true;
     }
 
-    return dateFound;
+    return date_found;
 }
 
-struct buffer_data
-{
-    const uint8_t *ptr;
-    size_t left_size;
+struct BufferData {
+    const uint8_t* ptr = nullptr;
+    size_t left_size = 0;
 };
 
-static int read_packet(void *opaque, uint8_t *buf, int buf_size)
-{
-    struct buffer_data *bd = (struct buffer_data *)opaque;
-    buf_size = FFMIN(buf_size, bd->left_size);
+static int read_packet(void* opaque, uint8_t* buf, int buf_size) {
+    auto* buffer_data = static_cast<struct BufferData*>(opaque);
+    buf_size = FFMIN(buf_size, buffer_data->left_size);
 
-    if (!buf_size)
+    if (buf_size > 0) {
         return AVERROR_EOF;
+    }
 
-    memcpy(buf, bd->ptr, buf_size);
-    bd->ptr += buf_size;
-    bd->left_size -= buf_size;
+    memcpy(buf, buffer_data->ptr, buf_size);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    buffer_data->ptr += buf_size;
+    buffer_data->left_size -= buf_size;
     return buf_size;
 }
 
-bool DateParser::fromMP4Buffer(const QByteArray &buffer, Date &date)
-{
-    bool dateFound = false;
-    AVFormatContext *fmt_ctx = NULL;
-    AVIOContext *avio_ctx = NULL;
-    uint8_t *avio_ctx_buffer = NULL;
+bool date_parser::from_mp4_buffer(const QByteArray& buffer, Date& date) {
+    bool date_found = false;
+    AVFormatContext* fmt_ctx = nullptr;
+    AVIOContext* avio_ctx = nullptr;
+    uint8_t* avio_ctx_buffer = nullptr;
     size_t avio_ctx_buffer_size = 4096;
-    AVDictionaryEntry *tag = NULL;
+    AVDictionaryEntry* tag = nullptr;
     int ret = 0;
-    struct buffer_data bd = {0};
-
-    bd.ptr = (const uint8_t *)buffer.data();
-    bd.left_size = buffer.size();
+    struct BufferData buffer_data;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    buffer_data.ptr = reinterpret_cast<const uint8_t*>(buffer.data());
+    buffer_data.left_size = buffer.size();
 
     fmt_ctx = avformat_alloc_context();
-    if (!fmt_ctx)
+    if (fmt_ctx == nullptr) {
         ret = AVERROR(ENOMEM);
-
-    if (ret == 0)
-    {
-        avio_ctx_buffer = (uint8_t *)av_malloc(avio_ctx_buffer_size);
-        if (!avio_ctx_buffer)
-            ret = AVERROR(ENOMEM);
     }
 
-    if (ret == 0)
-    {
-        avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, &bd, &read_packet,
-                                      NULL, NULL);
-        if (!avio_ctx)
+    if (ret == 0) {
+        avio_ctx_buffer = static_cast<uint8_t*>(av_malloc(avio_ctx_buffer_size));
+        if (avio_ctx_buffer == nullptr) {
             ret = AVERROR(ENOMEM);
+        }
     }
 
-    if (ret == 0)
-    {
+    if (ret == 0) {
+        avio_ctx = avio_alloc_context(avio_ctx_buffer,
+                                      (int)avio_ctx_buffer_size,
+                                      0,
+                                      &buffer_data,
+                                      &read_packet,
+                                      nullptr,
+                                      nullptr);
+        if (avio_ctx == nullptr) {
+            ret = AVERROR(ENOMEM);
+        }
+    }
+
+    if (ret == 0) {
         fmt_ctx->pb = avio_ctx;
-        ret = avformat_open_input(&fmt_ctx, NULL, NULL, NULL);
+        ret = avformat_open_input(&fmt_ctx, nullptr, nullptr, nullptr);
     }
 
-    if (ret == 0)
-    {
+    if (ret == 0) {
         tag = av_dict_get(fmt_ctx->metadata, "creation_time", tag, AV_DICT_IGNORE_SUFFIX);
-        if (tag)
-        {
+        if (tag != nullptr) {
             std::string value = tag->value;
-            if (value.size() >= 7)
-            {
-                date.m_year = std::stoi(value.substr(0, 4));
-                date.m_month = std::stoi(value.substr(5, 2));
-                dateFound = true;
+            if (value.size() >= 7) {
+                date.year = std::stoi(value.substr(0, 4));
+                date.month = std::stoi(value.substr(5, 2));
+                date_found = true;
             }
         }
     }
 
     avformat_close_input(&fmt_ctx);
 
-    if (avio_ctx)
-        av_freep(&avio_ctx->buffer);
+    if (avio_ctx != nullptr) {
+        av_freep(static_cast<void*>(&avio_ctx->buffer));
+    }
     avio_context_free(&avio_ctx);
 
-    return dateFound;
+    return date_found;
 }
 
-bool DateParser::fromFileName(const std::string &fileName, Date &date)
-{
-    bool dateFound = false;
-    size_t start = 0, size = 0;
-    bool checkingNumber = false;
+bool date_parser::from_file_name(const std::string& file_name, Date& date) {
+    bool date_found = false;
+    size_t start = 0;
+    size_t size = 0;
+    bool checking_number = false;
 
-    for (size_t i = 0; i <= fileName.size() && !dateFound; i++)
-    {
-        if (i < fileName.size() && std::isdigit(fileName[i]))
-        {
-            if (!checkingNumber)
-            {
+    for (size_t i = 0; i <= file_name.size() && !date_found; i++) {
+        if (i < file_name.size() && (std::isdigit(file_name[i]) != 0)) {
+            if (!checking_number) {
                 start = i;
-                checkingNumber = true;
+                checking_number = true;
             }
             size++;
-        }
-        else
-        {
-            if (size == 8)
-            {
-                int year = std::stoi(fileName.substr(start, 4));
-                int month = std::stoi(fileName.substr(start + 4, 2));
-                int day = std::stoi(fileName.substr(start + 6, 2));
+        } else {
+            if (size == 8) {
+                int year = std::stoi(file_name.substr(start, 4));
+                int month = std::stoi(file_name.substr(start + 4, 2));
+                int day = std::stoi(file_name.substr(start + 6, 2));
 
-                if (2000 <= year && 1 <= month && month <= 12 && 1 <= day && day <= 31)
-                {
+                if (0 <= year && 1 <= month && month <= 12 && 1 <= day && day <= 31) {
                     time_t now = time(0);
                     struct tm tstruct;
-                    tstruct = *localtime(&now);
+                    localtime_s(&tstruct, &now);
 
-                    int currYear = 1900 + tstruct.tm_year;
-                    int currMonth = 1 + tstruct.tm_mon;
-                    int currDay = tstruct.tm_mday;
+                    int curr_year = 1900 + tstruct.tm_year;
+                    int curr_month = 1 + tstruct.tm_mon;
+                    int curr_day = tstruct.tm_mday;
 
-                    if (year < currYear ||
-                        (year == currYear &&
-                         (month < currMonth || (month == currMonth && day <= currDay))))
-                    {
-                        date.m_year = year;
-                        date.m_month = month;
-                        dateFound = true;
+                    if (year < curr_year ||
+                        (year == curr_year &&
+                         (month < curr_month || (month == curr_month && day <= curr_day)))) {
+                        date.year = year;
+                        date.month = month;
+                        date_found = true;
                     }
                 }
             }
 
-            checkingNumber = false;
+            checking_number = false;
             start = size = 0;
         }
     }
 
-    return dateFound;
+    return date_found;
 }

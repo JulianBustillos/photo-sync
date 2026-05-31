@@ -1,91 +1,92 @@
 #include "Settings.hpp"
+
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
-const QString Settings::ConfigFilename = "Configuration.json";
-const QString Settings::ImportKey = "ImportPath";
-const QString Settings::ExportKey = "ExportPath";
-const QString Settings::DeleteKey = "Delete";
+const QString Settings::config_filename = "Configuration.json";
+const QString Settings::import_key = "ImportPath";
+const QString Settings::export_key = "ExportPath";
+const QString Settings::delete_key = "Delete";
 
-Settings::Settings(const QString &executablePath)
-    : m_configPath(executablePath + "/" + ConfigFilename), m_importPath(""), m_exportPath(""),
-      m_deleteFiles(false)
-{
-}
+Settings::Settings(const QString& executable_path)
+    : config_path_(executable_path + "/" + config_filename),
+      import_path_(""),
+      export_path_(""),
+      delete_files_(false) {}
 
-Settings::~Settings() {}
+bool Settings::parse_config_file() {
+    QFile config_file(config_path_);
 
-bool Settings::parseConfigFile()
-{
-    QFile configFile(m_configPath);
-
-    if (!configFile.open(QIODevice::ReadOnly))
-    {
+    if (!config_file.open(QIODevice::ReadOnly)) {
         return false;
     }
 
-    QByteArray data = configFile.readAll();
-    configFile.close();
+    QByteArray data = config_file.readAll();
+    config_file.close();
 
-    QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
+    QJsonParseError parse_error;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &parse_error);
 
-    if (parseError.error != QJsonParseError::NoError)
-    {
-        qWarning() << m_configPath << " JSON parse error:" << parseError.errorString();
+    if (parse_error.error != QJsonParseError::NoError) {
+        qWarning() << config_path_ << " JSON parse error:" << parse_error.errorString();
         return false;
     }
 
-    if (!doc.isObject())
-    {
-        qWarning() << m_configPath << " root is not a JSON object";
+    if (!doc.isObject()) {
+        qWarning() << config_path_ << " root is not a JSON object";
         return false;
     }
 
     QJsonObject obj = doc.object();
 
-    m_importPath = obj[ImportKey].toString();
-    m_exportPath = obj[ExportKey].toString();
-    m_deleteFiles = obj[DeleteKey].toBool();
+    import_path_ = obj[import_key].toString();
+    export_path_ = obj[export_key].toString();
+    delete_files_ = obj[delete_key].toBool();
 
     return true;
 }
 
-bool Settings::exportConfigFile() const
-{
+void Settings::export_config_file() const {
     QJsonObject obj;
-    obj[ImportKey] = m_importPath;
-    obj[ExportKey] = m_exportPath;
-    obj[DeleteKey] = m_deleteFiles;
+    obj[import_key] = import_path_;
+    obj[export_key] = export_path_;
+    obj[delete_key] = delete_files_;
 
     QJsonDocument doc(obj);
 
-    QFile configFile(m_configPath);
+    QFile config_file(config_path_);
 
-    if (!configFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
-    {
-        qWarning() << m_configPath << " failed to open file for writing";
-        return false;
+    if (!config_file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        qWarning() << config_path_ << " failed to open file for writing";
     }
 
-    configFile.write(doc.toJson(QJsonDocument::Indented));
+    config_file.write(doc.toJson(QJsonDocument::Indented));
 
-    configFile.close();
-    return true;
+    config_file.close();
 }
 
-void Settings::setConfig(const QString &importPath, const QString &exportPath, bool deleteFiles)
-{
-    m_importPath = importPath;
-    m_exportPath = exportPath;
-    m_deleteFiles = deleteFiles;
+void Settings::set_import_path(const QString& import_path) {
+    import_path_ = import_path;
 }
 
-void Settings::getConfig(QString &importPath, QString &exportPath, bool &deleteFiles) const
-{
-    importPath = m_importPath;
-    exportPath = m_exportPath;
-    deleteFiles = m_deleteFiles;
+void Settings::set_export_path(const QString& export_path) {
+    export_path_ = export_path;
+}
+
+void Settings::set_delete_files(bool delete_files) {
+    delete_files_ = delete_files;
+}
+
+QString Settings::get_import_path() const {
+    return import_path_;
+}
+
+QString Settings::get_export_path() const {
+    return export_path_;
+}
+
+bool Settings::get_delete_files() const {
+    return delete_files_;
 }

@@ -3,29 +3,26 @@
 #include <QFileInfo>
 #include <QString>
 
-struct Date
-{
-    int m_year;
-    int m_month;
+struct Date {
+    int year = 0;
+    int month = 0;
 
-    Date() : m_year(0), m_month(0) {};
-    QString toQString() const;
+    Date() = default;
+    [[nodiscard]] QString to_qstring() const;
 };
 
-bool operator<(const Date &lhs, const Date &rhs);
+bool operator<(const Date& lhs, const Date& rhs);
 
-struct ExistingFile
-{
-    const QFileInfo m_info;
-    QByteArray m_checksum;
+struct ExistingFile {
+    QFileInfo info;
+    QByteArray checksum;
 
-    ExistingFile(const QFileInfo &info) : m_info(info) {};
+    ExistingFile(const QFileInfo& info) : info(info) {};
 };
 
-struct ExportFile
-{
-    const QFileInfo m_info;
-    const Date m_date;
+struct ExportFile {
+    QFileInfo info;
+    Date date;
 
-    ExportFile(const QFileInfo &info, const Date &date) : m_info(info), m_date(date) {};
+    ExportFile(const QFileInfo& info, const Date& date) : info(info), date(date) {};
 };

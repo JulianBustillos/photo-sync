@@ -3,34 +3,33 @@
 #include "FileManager.hpp"
 #include "Settings.hpp"
 #include "ui_PhotoSync.h"
+
 #include <QLineEdit>
 #include <QMainWindow>
 
-class PhotoSync : public QMainWindow
-{
+class PhotoSync : public QMainWindow {
     Q_OBJECT
     friend FileManager;
 
-  public:
-    PhotoSync(QWidget *parent = Q_NULLPTR);
-    ~PhotoSync();
+public:
+    PhotoSync(QWidget* parent = Q_NULLPTR);
 
-  private:
-    void selectDirectory(QString title, QLineEdit &lineEdit);
+private:
+    void select_directory(const QString& title, QLineEdit& line_edit);
     void run();
 
-  private slots:
-    void createWarning(QString title, QString message, bool emitAnswer);
-    void setProgressBarValue(int value);
-    void setProgressBarMaximum(int maximum);
-    void appendOutput(QString output);
+    // Qt slots
+    void create_warning(const QString& title, const QString& message, bool emit_answer);
+    void set_progress_bar_value(int value);
+    void set_progress_bar_maximum(int maximum);
+    void append_output(const QString& output);
     void finish();
 
-  signals:
-    void warningAnswer(bool answer);
+signals:
+    void warning_answer(bool answer);
 
-  private:
-    Ui::PhotoSyncClass m_ui;
-    Settings m_settings;
-    FileManager m_fileManager;
+private:
+    Ui::PhotoSyncClass ui_;
+    Settings settings_;
+    FileManager file_manager_;
 };

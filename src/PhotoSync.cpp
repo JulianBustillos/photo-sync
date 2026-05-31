@@ -1,85 +1,94 @@
 #include "PhotoSync.hpp"
+
 #include <QFileDialog>
 #include <QMessageBox>
 
-PhotoSync::PhotoSync(QWidget *parent)
-    : QMainWindow(parent), m_settings(QCoreApplication::applicationDirPath()), m_fileManager(this)
-{
-    m_ui.setupUi(this);
-    m_ui.progressBar->setValue(0);
-    m_ui.startButton->setText("Start");
+PhotoSync::PhotoSync(QWidget* parent)
+    : QMainWindow(parent),
+      ui_(),
+      settings_(QCoreApplication::applicationDirPath()),
+      file_manager_(this) {
+    ui_.setupUi(this);
+    ui_.progressBar->setValue(0);
+    ui_.startButton->setText("Start");
 
-    if (m_settings.parseConfigFile())
-    {
-        QString importPath, exportPath;
-        bool remove = false;
-
-        m_settings.getConfig(importPath, exportPath, remove);
-        m_ui.importEdit->setText(importPath);
-        m_ui.exportEdit->setText(exportPath);
-        m_ui.deleteCheckBox->setChecked(remove);
+    if (settings_.parse_config_file()) {
+        ui_.importEdit->setText(settings_.get_import_path());
+        ui_.exportEdit->setText(settings_.get_export_path());
+        ui_.deleteCheckBox->setChecked(settings_.get_delete_files());
     }
 
-    QObject::connect(m_ui.importToolButton, &QToolButton::clicked, this,
-                     [&]() { selectDirectory("Import directory path", *m_ui.importEdit); });
-    QObject::connect(m_ui.exportToolButton, &QToolButton::clicked, this,
-                     [&]() { selectDirectory("Export directory path", *m_ui.exportEdit); });
-    QObject::connect(m_ui.startButton, &QToolButton::clicked, this, &PhotoSync::run);
+    QObject::connect(ui_.importToolButton, &QToolButton::clicked, this, [&]() {
+        select_directory("Import directory path", *ui_.importEdit);
+    });
+    QObject::connect(ui_.exportToolButton, &QToolButton::clicked, this, [&]() {
+        select_directory("Export directory path", *ui_.exportEdit);
+    });
+    QObject::connect(ui_.startButton, &QToolButton::clicked, this, &PhotoSync::run);
 
-    QObject::connect(&m_fileManager, &FileManager::warning, this, &PhotoSync::createWarning);
-    QObject::connect(&m_fileManager, &FileManager::progressBarValue, this,
-                     &PhotoSync::setProgressBarValue);
-    QObject::connect(&m_fileManager, &FileManager::progressBarMaximum, this,
-                     &PhotoSync::setProgressBarMaximum);
-    QObject::connect(&m_fileManager, &FileManager::output, this, &PhotoSync::appendOutput);
-    QObject::connect(&m_fileManager, &FileManager::finished, this, &PhotoSync::finish);
-    QObject::connect(this, &PhotoSync::warningAnswer, &m_fileManager, &FileManager::warningAnswer);
+    QObject::connect(&file_manager_, &FileManager::warning, this, &PhotoSync::create_warning);
+    QObject::connect(
+        &file_manager_, &FileManager::progress_var_value, this, &PhotoSync::set_progress_bar_value);
+    QObject::connect(&file_manager_,
+                     &FileManager::progress_bar_maximum,
+                     this,
+                     &PhotoSync::set_progress_bar_maximum);
+    QObject::connect(&file_manager_, &FileManager::output, this, &PhotoSync::append_output);
+    QObject::connect(&file_manager_, &FileManager::finished, this, &PhotoSync::finish);
+    QObject::connect(
+        this, &PhotoSync::warning_answer, &file_manager_, &FileManager::warning_answer);
 }
 
-PhotoSync::~PhotoSync() {}
-
-void PhotoSync::selectDirectory(QString title, QLineEdit &lineEdit)
-{
-    QString startDir = !lineEdit.text().isEmpty() ? lineEdit.text() : QDir::homePath();
-    QString selectedDir = QFileDialog::getExistingDirectory(this, title, startDir);
-    if (!selectedDir.isEmpty())
-        lineEdit.setText(selectedDir);
+void PhotoSync::select_directory(const QString& title, QLineEdit& line_edit) {
+    QString start_dir = !line_edit.text().isEmpty() ? line_edit.text() : QDir::homePath();
+    QString selected_dir = QFileDialog::getExistingDirectory(this, title, start_dir);
+    if (!selected_dir.isEmpty()) {
+        line_edit.setText(selected_dir);
+    }
 }
 
-void PhotoSync::run()
-{
-    m_settings.setConfig(m_ui.importEdit->text(), m_ui.exportEdit->text(),
-                         m_ui.deleteCheckBox->isChecked());
+void PhotoSync::run() {
+    QObject::disconnect(ui_.startButton, nullptr, nullptr, nullptr);
+    QObject::connect(ui_.startButton, &QToolButton::clicked, &file_manager_, &FileManager::cancel);
+    ui_.startButton->setText("Cancel");
 
-    QObject::disconnect(m_ui.startButton, nullptr, nullptr, nullptr);
-    QObject::connect(m_ui.startButton, &QToolButton::clicked, &m_fileManager, &FileManager::cancel);
-    m_ui.startButton->setText("Cancel");
+    settings_.set_import_path(ui_.importEdit->text());
+    settings_.set_export_path(ui_.exportEdit->text());
+    settings_.set_delete_files(ui_.deleteCheckBox->isChecked());
 
-    m_fileManager.setSettings(m_ui.importEdit->text(), m_ui.exportEdit->text(),
-                              m_ui.deleteCheckBox->isChecked());
-    m_fileManager.start(QThread::NormalPriority);
+    file_manager_.set_settings(settings_);
+    file_manager_.start(QThread::NormalPriority);
 }
 
-void PhotoSync::createWarning(QString title, QString message, bool emitAnswer)
-{
-    QMessageBox::StandardButton button = QMessageBox::warning(
-        this, title, message, emitAnswer ? QMessageBox::Ok | QMessageBox::Cancel : QMessageBox::Ok);
-    if (emitAnswer)
-        emit warningAnswer(button == QMessageBox::Ok);
+void PhotoSync::create_warning(const QString& title, const QString& message, bool emit_answer) {
+    QMessageBox::StandardButton button =
+        QMessageBox::warning(this,
+                             title,
+                             message,
+                             emit_answer ? QMessageBox::Ok | QMessageBox::Cancel : QMessageBox::Ok);
+    if (emit_answer) {
+        emit warning_answer(button == QMessageBox::Ok);
+    }
 }
 
-void PhotoSync::setProgressBarValue(int value) { m_ui.progressBar->setValue(value); }
+void PhotoSync::set_progress_bar_value(int value) {
+    ui_.progressBar->setValue(value);
+}
 
-void PhotoSync::setProgressBarMaximum(int maximum) { m_ui.progressBar->setMaximum(maximum); }
+void PhotoSync::set_progress_bar_maximum(int maximum) {
+    ui_.progressBar->setMaximum(maximum);
+}
 
-void PhotoSync::appendOutput(QString output) { m_ui.textEditOutput->append(output); }
+void PhotoSync::append_output(const QString& output) {
+    ui_.textEditOutput->append(output);
+}
 
-void PhotoSync::finish()
-{
-    QObject::disconnect(m_ui.startButton, nullptr, nullptr, nullptr);
-    QObject::connect(m_ui.startButton, &QToolButton::clicked, this, &PhotoSync::run);
-    m_ui.startButton->setText("Start");
+void PhotoSync::finish() {
+    QObject::disconnect(ui_.startButton, nullptr, nullptr, nullptr);
+    QObject::connect(ui_.startButton, &QToolButton::clicked, this, &PhotoSync::run);
+    ui_.startButton->setText("Start");
 
-    if (m_fileManager.getStatus())
-        m_settings.exportConfigFile();
+    if (file_manager_.get_status()) {
+        settings_.export_config_file();
+    }
 }

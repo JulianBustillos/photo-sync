@@ -2,6 +2,8 @@
 
 #include "exif.h"
 
+#include <regex>
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/dict.h>
@@ -69,7 +71,7 @@ bool date_parser::from_mp4_buffer(const QByteArray& buffer, Date& date) {
 
     if (ret == 0) {
         avio_ctx = avio_alloc_context(avio_ctx_buffer,
-                                      (int)avio_ctx_buffer_size,
+                                      static_cast<int>(avio_ctx_buffer_size),
                                       0,
                                       &buffer_data,
                                       &read_packet,
@@ -109,44 +111,21 @@ bool date_parser::from_mp4_buffer(const QByteArray& buffer, Date& date) {
 
 bool date_parser::from_file_name(const std::string& file_name, Date& date) {
     bool date_found = false;
-    size_t start = 0;
-    size_t size = 0;
-    bool checking_number = false;
+    std::regex date_re(R"((^|[^\d])(\d{8})([^\d]|$))");
+    std::smatch match;
 
-    for (size_t i = 0; i <= file_name.size() && !date_found; i++) {
-        if (i < file_name.size() && (std::isdigit(file_name[i]) != 0)) {
-            if (!checking_number) {
-                start = i;
-                checking_number = true;
-            }
-            size++;
-        } else {
-            if (size == 8) {
-                int year = std::stoi(file_name.substr(start, 4));
-                int month = std::stoi(file_name.substr(start + 4, 2));
-                int day = std::stoi(file_name.substr(start + 6, 2));
+    for (std::sregex_iterator match_iter(file_name.begin(), file_name.end(), date_re), end;
+         !date_found && match_iter != end;
+         ++match_iter) {
+        std::string curr_match = (*match_iter)[2];
+        int year = std::stoi(curr_match.substr(0, 4));
+        int month = std::stoi(curr_match.substr(4, 2));
+        int day = std::stoi(curr_match.substr(6, 2));
 
-                if (0 <= year && 1 <= month && month <= 12 && 1 <= day && day <= 31) {
-                    time_t now = time(0);
-                    struct tm tstruct;
-                    localtime_s(&tstruct, &now);
-
-                    int curr_year = 1900 + tstruct.tm_year;
-                    int curr_month = 1 + tstruct.tm_mon;
-                    int curr_day = tstruct.tm_mday;
-
-                    if (year < curr_year ||
-                        (year == curr_year &&
-                         (month < curr_month || (month == curr_month && day <= curr_day)))) {
-                        date.year = year;
-                        date.month = month;
-                        date_found = true;
-                    }
-                }
-            }
-
-            checking_number = false;
-            start = size = 0;
+        if (1900 <= year && 1 <= month && month <= 12 && 1 <= day && day <= 31) {
+            date.year = year;
+            date.month = month;
+            date_found = true;
         }
     }
 

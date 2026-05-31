@@ -45,12 +45,16 @@ private:
     bool check_delete();
     void build_existing_file_data();
     void build_import_file_data();
+    void setup_progress(int nb_import_files);
+    bool check_file(const QFileInfo& file_info);
     void export_files();
     void delete_files();
     void print_stats();
     void print_elapsed_time(std::chrono::steady_clock::time_point start,
                             std::chrono::steady_clock::time_point end);
     void add_to_progress(int val);
+
+    static const int name_max_index;
 
     QStringList extensions_;
 

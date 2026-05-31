@@ -5,12 +5,12 @@
 #include <QCryptographicHash>
 #include <QDirIterator>
 
-#define MAX_NAME_INDEX 100
+const int FileManager::name_max_index = 100;
 
 FileManager::FileManager(QObject* parent)
     : QThread(parent),
       extensions_({"*.jpg", "*.jpeg", "*.png", "*.mp4"}),
-      cancelled_((int)false),
+      cancelled_(static_cast<int>(false)),
       status_(false),
       delete_files_(false),
       run_count_(0),
@@ -43,7 +43,7 @@ void FileManager::warning_answer(bool answer) {
 }
 
 void FileManager::cancel() {
-    cancelled_.storeRelaxed((int)true);
+    cancelled_.storeRelaxed(static_cast<int>(true));
 }
 
 bool FileManager::is_parsed(const QFileInfo& file_info, Date& date) {
@@ -78,7 +78,7 @@ bool FileManager::is_parsed(const QFileInfo& file_info, Date& date) {
 }
 
 void FileManager::run() {
-    cancelled_.storeRelaxed((int)false);
+    cancelled_.storeRelaxed(static_cast<int>(false));
     progress_ = 0;
     add_to_progress(0);
     emit progress_bar_maximum(100);
@@ -116,7 +116,7 @@ void FileManager::run() {
         print_elapsed_time(start_time, end_time);
     }
 
-    status_ = status_ && !(bool)cancelled_.loadRelaxed();
+    status_ = status_ && !static_cast<bool>(cancelled_.loadRelaxed());
 }
 
 bool FileManager::check_dir() {
@@ -160,7 +160,7 @@ void FileManager::build_existing_file_data() {
     QDirIterator iter(
         export_dir_.absolutePath(), extensions_, QDir::Files, QDirIterator::Subdirectories);
     while (iter.hasNext()) {
-        if ((bool)cancelled_.loadRelaxed()) {
+        if (static_cast<bool>(cancelled_.loadRelaxed())) {
             return;
         }
 
@@ -178,13 +178,39 @@ void FileManager::build_import_file_data() {
         import_file_paths.append(QFileInfo(iter.next()));
     }
 
+    setup_progress(static_cast<int>((import_file_paths.size())));
+
+    for (const QFileInfo& file_info : import_file_paths) {
+        if (static_cast<bool>(cancelled_.loadRelaxed())) {
+            return;
+        }
+
+        if (check_file(file_info)) {
+            Date date;
+            if (!is_parsed(file_info, date)) {
+                import_errors_.insert(file_info.absoluteFilePath());
+                add_to_progress(copy_progress_ + delete_progress_);
+                continue;
+            }
+            directories_to_create_.insert(date);
+            files_to_copy_.emplace_back(file_info, date);
+        } else {
+            if (delete_files_) {
+                files_to_delete_.push_back(file_info);
+            }
+            add_to_progress(copy_progress_);
+        }
+    }
+}
+
+void FileManager::setup_progress(int nb_import_files) {
     int progress_size = -1;
     if (delete_files_) {
-        progress_size = (int)import_file_paths.size() * 10;
+        progress_size = nb_import_files * 10;
         copy_progress_ = 9;
         delete_progress_ = 1;
     } else {
-        progress_size = (int)import_file_paths.size();
+        progress_size = nb_import_files;
         copy_progress_ = 1;
         delete_progress_ = 0;
     }
@@ -194,23 +220,20 @@ void FileManager::build_import_file_data() {
     } else {
         emit progress_bar_maximum(progress_size);
     }
+}
 
-    for (QFileInfo& file_info : import_file_paths) {
-        if ((bool)cancelled_.loadRelaxed()) {
-            return;
-        }
+bool FileManager::check_file(const QFileInfo& file_info) {
+    bool is_file_valid = true;
 
-        bool copy_file = true;
-
-        auto files_iter = existing_files_.find(file_info.size());
-        if (files_iter != existing_files_.end()) {
-            QCryptographicHash hash(QCryptographicHash::Md5);
-            QFile new_file(file_info.absoluteFilePath());
-            if (!new_file.open(QIODevice::ReadOnly)) {
-                import_errors_.insert(file_info.absoluteFilePath());
-                add_to_progress(copy_progress_ + delete_progress_);
-                continue;
-            }
+    auto files_iter = existing_files_.find(file_info.size());
+    if (files_iter != existing_files_.end()) {
+        QCryptographicHash hash(QCryptographicHash::Md5);
+        QFile new_file(file_info.absoluteFilePath());
+        if (!new_file.open(QIODevice::ReadOnly)) {
+            import_errors_.insert(file_info.absoluteFilePath());
+            add_to_progress(copy_progress_ + delete_progress_);
+            is_file_valid = false;
+        } else {
             hash.addData(new_file.readAll());
             QByteArray new_file_checksum = hash.result();
             new_file.close();
@@ -230,29 +253,15 @@ void FileManager::build_import_file_data() {
                 }
 
                 if (new_file_checksum == file_data.checksum) {
-                    copy_file = false;
+                    is_file_valid = false;
                     duplicate_count_++;
                     break;
                 }
             }
         }
-
-        if (copy_file) {
-            Date date;
-            if (!is_parsed(file_info, date)) {
-                import_errors_.insert(file_info.absoluteFilePath());
-                add_to_progress(copy_progress_ + delete_progress_);
-                continue;
-            }
-            directories_to_create_.insert(date);
-            files_to_copy_.emplace_back(file_info, date);
-        } else {
-            if (delete_files_) {
-                files_to_delete_.push_back(file_info);
-            }
-            add_to_progress(copy_progress_);
-        }
     }
+
+    return is_file_valid;
 }
 
 void FileManager::export_files() {
@@ -261,7 +270,7 @@ void FileManager::export_files() {
     }
 
     for (ExportFile& file_to_copy : files_to_copy_) {
-        if ((bool)cancelled_.loadRelaxed()) {
+        if (static_cast<bool>(cancelled_.loadRelaxed())) {
             return;
         }
 
@@ -273,15 +282,15 @@ void FileManager::export_files() {
         bool copy = false;
 
         if (export_file_info.exists()) {
-            int index = (int)file_name.lastIndexOf(".");
+            int index = static_cast<int>(file_name.lastIndexOf("."));
             QString name = file_name.left(index);
             QString extension = file_name.right(file_name.size() - index);
-            while (export_file_info.exists() && count < MAX_NAME_INDEX) {
+            while (export_file_info.exists() && count < name_max_index) {
                 export_file_info.setFile(name + "_" + QString::number(++count) + extension);
             }
         }
 
-        if (count < MAX_NAME_INDEX) {
+        if (count < name_max_index) {
             QFile import_file(file_to_copy.info.absoluteFilePath());
             QFile export_file(export_file_info.absoluteFilePath());
 
@@ -348,15 +357,15 @@ void FileManager::print_stats() {
                          : " file in import directory could not be read !"));
     }
 
-    if ((bool)cancelled_.loadRelaxed()) {
+    if (static_cast<bool>(cancelled_.loadRelaxed())) {
         emit output("SYNC CANCELED !");
     }
 }
 
 void FileManager::print_elapsed_time(std::chrono::steady_clock::time_point start,
                                      std::chrono::steady_clock::time_point end) {
-    int elapsed_time =
-        (int)std::round(std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
+    int elapsed_time = static_cast<int>(
+        std::round(std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
     int hours = 0;
     int minutes = 0;
     int seconds = 0;

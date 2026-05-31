@@ -2,7 +2,7 @@
 
 #include "file_manager.hpp"
 #include "settings.hpp"
-#include "ui_PhotoSync.h"
+#include "ui_photo_sync.h"
 
 #include <QLineEdit>
 #include <QMainWindow>

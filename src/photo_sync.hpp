@@ -1,7 +1,7 @@
 #pragma once
 
-#include "FileManager.hpp"
-#include "Settings.hpp"
+#include "file_manager.hpp"
+#include "settings.hpp"
 #include "ui_PhotoSync.h"
 
 #include <QLineEdit>

@@ -1,5 +1,5 @@
 #pragma once
-#include "FileData.hpp"
+#include "file_data.hpp"
 
 #include <QByteArray>
 

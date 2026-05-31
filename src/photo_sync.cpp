@@ -1,4 +1,4 @@
-#include "PhotoSync.hpp"
+#include "photo_sync.hpp"
 
 #include <QFileDialog>
 #include <QMessageBox>

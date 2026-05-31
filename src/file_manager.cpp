@@ -1,6 +1,6 @@
-#include "FileManager.hpp"
+#include "file_manager.hpp"
 
-#include "DateParser.hpp"
+#include "date_parser.hpp"
 
 #include <QCryptographicHash>
 #include <QDirIterator>

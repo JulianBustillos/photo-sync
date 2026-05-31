@@ -1,6 +1,6 @@
 #pragma once
-#include "FileData.hpp"
-#include "Settings.hpp"
+#include "file_data.hpp"
+#include "settings.hpp"
 
 #include <QDir>
 #include <QFileInfo>

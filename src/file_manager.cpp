@@ -83,7 +83,7 @@ void FileManager::run() {
     add_to_progress(0);
     emit progress_bar_maximum(100);
 
-    status_ = check_dir() && check_delete();
+    status_ = check_dirs() && check_delete();
 
     if (status_) {
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
@@ -119,7 +119,7 @@ void FileManager::run() {
     status_ = status_ && !static_cast<bool>(cancelled_.loadRelaxed());
 }
 
-bool FileManager::check_dir() {
+bool FileManager::check_dirs() {
     if (import_dir_.isEmpty()) {
         emit warning("Path error", "Import path is empty !", false);
         return false;
@@ -185,7 +185,7 @@ void FileManager::build_import_file_data() {
             return;
         }
 
-        if (check_file(file_info)) {
+        if (!already_exists(file_info)) {
             Date date;
             if (!is_parsed(file_info, date)) {
                 import_errors_.insert(file_info.absoluteFilePath());
@@ -222,8 +222,8 @@ void FileManager::setup_progress(int nb_import_files) {
     }
 }
 
-bool FileManager::check_file(const QFileInfo& file_info) {
-    bool is_file_valid = true;
+bool FileManager::already_exists(const QFileInfo& file_info) {
+    bool same_file_found = false;
 
     auto files_iter = existing_files_.find(file_info.size());
     if (files_iter != existing_files_.end()) {
@@ -232,7 +232,7 @@ bool FileManager::check_file(const QFileInfo& file_info) {
         if (!new_file.open(QIODevice::ReadOnly)) {
             import_errors_.insert(file_info.absoluteFilePath());
             add_to_progress(copy_progress_ + delete_progress_);
-            is_file_valid = false;
+            same_file_found = true;
         } else {
             hash.addData(new_file.readAll());
             QByteArray new_file_checksum = hash.result();
@@ -253,7 +253,7 @@ bool FileManager::check_file(const QFileInfo& file_info) {
                 }
 
                 if (new_file_checksum == file_data.checksum) {
-                    is_file_valid = false;
+                    same_file_found = true;
                     duplicate_count_++;
                     break;
                 }
@@ -261,7 +261,7 @@ bool FileManager::check_file(const QFileInfo& file_info) {
         }
     }
 
-    return is_file_valid;
+    return same_file_found;
 }
 
 void FileManager::export_files() {

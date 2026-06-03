@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>PhotoSyncClass</class>
  <widget class="QMainWindow" name="PhotoSyncClass">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>520</width>
+    <height>403</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>PhotoSync</string>
   </property>

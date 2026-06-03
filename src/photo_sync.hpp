@@ -9,7 +9,6 @@
 
 class PhotoSync : public QMainWindow {
     Q_OBJECT
-    friend FileManager;
 
 public:
     PhotoSync(QWidget* parent = Q_NULLPTR);

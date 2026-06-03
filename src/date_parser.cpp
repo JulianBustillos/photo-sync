@@ -14,10 +14,10 @@ QDate date_parser::from_jpg_buffer(const QByteArray& buffer) {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     const auto* data = reinterpret_cast<const unsigned char*>(buffer.constData());
     int parsing_result = exif_info.parseFrom(data, buffer.size());
-    if (parsing_result == PARSE_EXIF_SUCCESS && exif_info.DateTime.size() >= 9) {
+    if (parsing_result == PARSE_EXIF_SUCCESS && exif_info.DateTime.size() >= 10) {
         int year = std::stoi(exif_info.DateTime.substr(0, 4));
         int month = std::stoi(exif_info.DateTime.substr(5, 2));
-        int day = std::stoi(exif_info.DateTime.substr(7, 2));
+        int day = std::stoi(exif_info.DateTime.substr(8, 2));
         return {year, month, day};
     }
 
@@ -92,10 +92,10 @@ QDate date_parser::from_mp4_buffer(const QByteArray& buffer) {
         tag = av_dict_get(fmt_ctx->metadata, "creation_time", tag, AV_DICT_IGNORE_SUFFIX);
         if (tag != nullptr) {
             std::string value = tag->value;
-            if (value.size() >= 9) {
+            if (value.size() >= 10) {
                 int year = std::stoi(value.substr(0, 4));
                 int month = std::stoi(value.substr(5, 2));
-                int day = std::stoi(value.substr(7, 2));
+                int day = std::stoi(value.substr(8, 2));
                 date = QDate(year, month, day);
             }
         }

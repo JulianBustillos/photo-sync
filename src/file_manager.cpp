@@ -120,10 +120,6 @@ void FileManager::run() {
 }
 
 bool FileManager::check_dirs() {
-    if (source_dir_.isEmpty()) {
-        emit warning("Path error", "source path is empty !", false);
-        return false;
-    }
     if (!source_dir_.exists()) {
         emit warning("Path error",
                      "source path : \"" + source_dir_.absolutePath() + "\" not found !",
@@ -131,10 +127,11 @@ bool FileManager::check_dirs() {
         return false;
     }
 
-    if (destination_dir_.isEmpty()) {
-        emit warning("Path error", "destination path is empty !", false);
+    if (source_dir_.isEmpty()) {
+        emit warning("Path error", "source path is empty !", false);
         return false;
     }
+
     if (!destination_dir_.exists()) {
         emit warning("Path error",
                      "destination path : \"" + destination_dir_.absolutePath() + "\" not found !",
@@ -337,11 +334,11 @@ void FileManager::print_stats(Context& context) {
     }
 
     emit output(QString::number(context.copy_count) +
-                (context.copy_count > 1 ? " files copied." : " file copied."));
+                (context.copy_count > 1 ? " files organized." : " file organized."));
 
     if (context.remove_count > 0) {
         emit output(QString::number(context.remove_count) +
-                    (context.remove_count > 1 ? " files deleted." : " file deleted."));
+                    (context.remove_count > 1 ? " files removed." : " file removed."));
     }
 
     if (context.destination_errors.size() > 0) {
@@ -359,7 +356,7 @@ void FileManager::print_stats(Context& context) {
     }
 
     if (static_cast<bool>(cancelled_.loadRelaxed())) {
-        emit output("SYNC CANCELED !");
+        emit output("Sync canceled !");
     }
 }
 

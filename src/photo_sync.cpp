@@ -11,7 +11,7 @@ PhotoSync::PhotoSync(QWidget* parent)
     ui_.setupUi(this);
     ui_.sort_mode_combo_box->addItem("Year", static_cast<int>(SortMode::Year));
     ui_.sort_mode_combo_box->addItem("Year/Month", static_cast<int>(SortMode::YearMonth));
-    ui_.sort_mode_combo_box->addItem("Year/Month/sDay", static_cast<int>(SortMode::YearMonthDay));
+    ui_.sort_mode_combo_box->addItem("Year/Month/Day", static_cast<int>(SortMode::YearMonthDay));
     ui_.progress_bar->setValue(0);
     ui_.start_button->setText("Start");
 

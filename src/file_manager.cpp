@@ -1,6 +1,8 @@
 #include "file_manager.hpp"
 
 #include "date_parser.hpp"
+#include "file.hpp"
+#include "sort_mode.hpp"
 
 #include <QCryptographicHash>
 #include <QDirIterator>
@@ -12,14 +14,9 @@ FileManager::FileManager(QObject* parent)
       extensions_({"*.jpg", "*.jpeg", "*.png", "*.mp4"}),
       cancelled_(static_cast<int>(false)),
       status_(false),
-      delete_files_(false),
-      run_count_(0),
-      progress_(0),
-      copy_progress_(0),
-      delete_progress_(0),
-      duplicate_count_(0),
-      copy_count_(0),
-      delete_count_(0) {}
+      sort_mode_(SortMode::YearMonth),
+      remove_files_(false),
+      progress_(0) {}
 
 FileManager::~FileManager() {
     cancel();
@@ -27,9 +24,10 @@ FileManager::~FileManager() {
 }
 
 void FileManager::set_settings(const Settings& settings) {
-    import_dir_ = QDir(settings.get_import_path());
-    export_dir_ = QDir(settings.get_export_path());
-    delete_files_ = settings.get_delete_files();
+    source_dir_ = QDir(settings.get_source_path());
+    destination_dir_ = QDir(settings.get_destination_path());
+    sort_mode_ = settings.get_sort_mode();
+    remove_files_ = settings.get_remove_files();
 }
 
 bool FileManager::get_status() const {
@@ -38,7 +36,7 @@ bool FileManager::get_status() const {
 
 void FileManager::warning_answer(bool answer) {
     QMutexLocker locker(&mutex_);
-    delete_files_ = answer;
+    remove_files_ = answer;
     condition_.wakeAll();
 }
 
@@ -46,35 +44,50 @@ void FileManager::cancel() {
     cancelled_.storeRelaxed(static_cast<int>(true));
 }
 
-bool FileManager::is_parsed(const QFileInfo& file_info, Date& date) {
-    bool is_parsed = false;
-    bool try_file_name = false;
+FileManager::Context::Context(SortMode mode)
+    : copy_progress(0),
+      remove_progress(0),
+      duplicate_count(0),
+      copy_count(0),
+      remove_count(0),
+      directories_to_create([mode](const QDate& lhs, const QDate& rhs) -> bool {
+          if (mode == SortMode::Year || lhs.year() != rhs.year()) {
+              return lhs.year() < rhs.year();
+          }
+          if (mode == SortMode::YearMonth || lhs.month() != rhs.month()) {
+              return lhs.month() < rhs.month();
+          }
+          return lhs.day() < rhs.day();
+      }) {}
+
+bool FileManager::parse_date(const QFileInfo& file_info, QDate& date) {
+    date = QDate();
+    bool is_valid = false;
 
     if (file_info.suffix().compare("jpg", Qt::CaseInsensitive) == 0 ||
         file_info.suffix().compare("jpeg", Qt::CaseInsensitive) == 0) {
         QFile file(file_info.absoluteFilePath());
         if (file.open(QIODevice::ReadOnly)) {
-            try_file_name = !date_parser::from_jpg_buffer(file.readAll(), date);
+            date = date_parser::from_jpg_buffer(file.readAll());
             file.close();
-            is_parsed = true;
+            is_valid = true;
         }
     } else if (file_info.suffix().compare("png", Qt::CaseInsensitive) == 0) {
-        try_file_name = true;
-        is_parsed = true;
+        is_valid = true;
     } else if (file_info.suffix().compare("mp4", Qt::CaseInsensitive) == 0) {
         QFile file(file_info.absoluteFilePath());
         if (file.open(QIODevice::ReadOnly)) {
-            try_file_name = !date_parser::from_mp4_buffer(file.readAll(), date);
+            date = date_parser::from_mp4_buffer(file.readAll());
             file.close();
-            is_parsed = true;
+            is_valid = true;
         }
     }
 
-    if (try_file_name) {
-        date_parser::from_file_name(file_info.fileName().toStdString(), date);
+    if (!date.isValid()) {
+        date = date_parser::from_file_name(file_info.fileName().toStdString());
     }
 
-    return is_parsed;
+    return is_valid;
 }
 
 void FileManager::run() {
@@ -83,34 +96,21 @@ void FileManager::run() {
     add_to_progress(0);
     emit progress_bar_maximum(100);
 
-    status_ = check_dirs() && check_delete();
+    status_ = check_dirs() && check_remove();
 
     if (status_) {
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
-        if ((run_count_++) > 0) {
-            emit output(QString());
-        }
+        emit output("Photos to organize: " + source_dir_.absolutePath());
+        emit output("Destination folder: " + destination_dir_.absolutePath());
 
-        emit output("FROM : " + import_dir_.absolutePath());
-        emit output("TO       : " + export_dir_.absolutePath());
+        Context context(sort_mode_);
 
-        duplicate_count_ = 0;
-        copy_count_ = 0;
-        delete_count_ = 0;
-
-        build_existing_file_data();
-        build_import_file_data();
-        export_files();
-        delete_files();
-        print_stats();
-
-        import_errors_.clear();
-        export_errors_.clear();
-        existing_files_.clear();
-        directories_to_create_.clear();
-        files_to_copy_.clear();
-        files_to_delete_.clear();
+        collect_destination_fingerprints(context);
+        collect_source_entries(context);
+        organize_files(context);
+        remove_files(context);
+        print_stats(context);
 
         std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
         print_elapsed_time(start_time, end_time);
@@ -120,24 +120,24 @@ void FileManager::run() {
 }
 
 bool FileManager::check_dirs() {
-    if (import_dir_.isEmpty()) {
-        emit warning("Path error", "Import path is empty !", false);
+    if (source_dir_.isEmpty()) {
+        emit warning("Path error", "source path is empty !", false);
         return false;
     }
-    if (!import_dir_.exists()) {
+    if (!source_dir_.exists()) {
         emit warning("Path error",
-                     "Import path : \"" + import_dir_.absolutePath() + "\" not found !",
+                     "source path : \"" + source_dir_.absolutePath() + "\" not found !",
                      false);
         return false;
     }
 
-    if (export_dir_.isEmpty()) {
-        emit warning("Path error", "Export path is empty !", false);
+    if (destination_dir_.isEmpty()) {
+        emit warning("Path error", "destination path is empty !", false);
         return false;
     }
-    if (!export_dir_.exists()) {
+    if (!destination_dir_.exists()) {
         emit warning("Path error",
-                     "Export path : \"" + export_dir_.absolutePath() + "\" not found !",
+                     "destination path : \"" + destination_dir_.absolutePath() + "\" not found !",
                      false);
         return false;
     }
@@ -145,74 +145,74 @@ bool FileManager::check_dirs() {
     return true;
 }
 
-bool FileManager::check_delete() {
-    if (delete_files_) {
+bool FileManager::check_remove() {
+    if (remove_files_) {
         QMutexLocker locker(&mutex_);
         emit warning(
-            "Delete warning", "Files are going to be deleted after copy. Proceed anyway ?", true);
+            "Remove warning", "Files are going to be removed after copy. Proceed anyway ?", true);
         condition_.wait(&mutex_);
-        return delete_files_;
+        return remove_files_;
     }
     return true;
 }
 
-void FileManager::build_existing_file_data() {
+void FileManager::collect_destination_fingerprints(Context& context) {
     QDirIterator iter(
-        export_dir_.absolutePath(), extensions_, QDir::Files, QDirIterator::Subdirectories);
+        destination_dir_.absolutePath(), extensions_, QDir::Files, QDirIterator::Subdirectories);
     while (iter.hasNext()) {
         if (static_cast<bool>(cancelled_.loadRelaxed())) {
             return;
         }
 
         QFileInfo file_info(iter.next());
-        existing_files_[file_info.size()].emplace_back(file_info);
+        context.destination_fingerprints[file_info.size()].emplace_back(file_info);
     }
 }
 
-void FileManager::build_import_file_data() {
+void FileManager::collect_source_entries(Context& context) {
     QDirIterator iter(
-        import_dir_.absolutePath(), extensions_, QDir::Files, QDirIterator::Subdirectories);
-    QVector<QFileInfo> import_file_paths;
+        source_dir_.absolutePath(), extensions_, QDir::Files, QDirIterator::Subdirectories);
+    QVector<QFileInfo> source_file_paths;
 
     while (iter.hasNext()) {
-        import_file_paths.append(QFileInfo(iter.next()));
+        source_file_paths.append(QFileInfo(iter.next()));
     }
 
-    setup_progress(static_cast<int>((import_file_paths.size())));
+    setup_progress(context, static_cast<int>((source_file_paths.size())));
 
-    for (const QFileInfo& file_info : import_file_paths) {
+    for (const QFileInfo& file_info : source_file_paths) {
         if (static_cast<bool>(cancelled_.loadRelaxed())) {
             return;
         }
 
-        if (!already_exists(file_info)) {
-            Date date;
-            if (!is_parsed(file_info, date)) {
-                import_errors_.insert(file_info.absoluteFilePath());
-                add_to_progress(copy_progress_ + delete_progress_);
+        if (!already_exists(context, file_info)) {
+            QDate date;
+            if (!parse_date(file_info, date)) {
+                context.source_errors.insert(file_info.absoluteFilePath());
+                add_to_progress(context.copy_progress + context.remove_progress);
                 continue;
             }
-            directories_to_create_.insert(date);
-            files_to_copy_.emplace_back(file_info, date);
+            context.directories_to_create.insert(date);
+            context.files_to_copy.emplace_back(file_info, date);
         } else {
-            if (delete_files_) {
-                files_to_delete_.push_back(file_info);
+            if (remove_files_) {
+                context.files_to_remove.push_back(file_info);
             }
-            add_to_progress(copy_progress_);
+            add_to_progress(context.copy_progress);
         }
     }
 }
 
-void FileManager::setup_progress(int nb_import_files) {
+void FileManager::setup_progress(Context& context, int nb_source_files) {
     int progress_size = -1;
-    if (delete_files_) {
-        progress_size = nb_import_files * 10;
-        copy_progress_ = 9;
-        delete_progress_ = 1;
+    if (remove_files_) {
+        progress_size = nb_source_files * 10;
+        context.copy_progress = 9;
+        context.remove_progress = 1;
     } else {
-        progress_size = nb_import_files;
-        copy_progress_ = 1;
-        delete_progress_ = 0;
+        progress_size = nb_source_files;
+        context.copy_progress = 1;
+        context.remove_progress = 0;
     }
 
     if (progress_size == 0) {
@@ -222,39 +222,39 @@ void FileManager::setup_progress(int nb_import_files) {
     }
 }
 
-bool FileManager::already_exists(const QFileInfo& file_info) {
+bool FileManager::already_exists(Context& context, const QFileInfo& file_info) {
     bool same_file_found = false;
 
-    auto files_iter = existing_files_.find(file_info.size());
-    if (files_iter != existing_files_.end()) {
+    auto fingerprints_iter = context.destination_fingerprints.find(file_info.size());
+    if (fingerprints_iter != context.destination_fingerprints.end()) {
         QCryptographicHash hash(QCryptographicHash::Md5);
         QFile new_file(file_info.absoluteFilePath());
         if (!new_file.open(QIODevice::ReadOnly)) {
-            import_errors_.insert(file_info.absoluteFilePath());
-            add_to_progress(copy_progress_ + delete_progress_);
+            context.source_errors.insert(file_info.absoluteFilePath());
+            add_to_progress(context.copy_progress + context.remove_progress);
             same_file_found = true;
         } else {
             hash.addData(new_file.readAll());
             QByteArray new_file_checksum = hash.result();
             new_file.close();
 
-            for (ExistingFile& file_data : files_iter->second) {
-                if (file_data.checksum.isEmpty()) {
-                    QFile existing_file(file_data.info.absoluteFilePath());
+            for (file::Fingerprint& fingerprints : fingerprints_iter->second) {
+                if (fingerprints.checksum.isEmpty()) {
+                    QFile existing_file(fingerprints.info.absoluteFilePath());
                     if (!existing_file.open(QIODevice::ReadOnly)) {
-                        export_errors_.insert(file_data.info.absoluteFilePath());
+                        context.destination_errors.insert(fingerprints.info.absoluteFilePath());
                         continue;
                     }
 
                     hash.reset();
                     hash.addData(existing_file.readAll());
-                    file_data.checksum = hash.result();
+                    fingerprints.checksum = hash.result();
                     existing_file.close();
                 }
 
-                if (new_file_checksum == file_data.checksum) {
+                if (new_file_checksum == fingerprints.checksum) {
                     same_file_found = true;
-                    duplicate_count_++;
+                    context.duplicate_count++;
                     break;
                 }
             }
@@ -264,97 +264,98 @@ bool FileManager::already_exists(const QFileInfo& file_info) {
     return same_file_found;
 }
 
-void FileManager::export_files() {
-    for (const auto& date : directories_to_create_) {
-        export_dir_.mkpath(date.to_qstring());
+void FileManager::organize_files(Context& context) {
+    for (const auto& date : context.directories_to_create) {
+        destination_dir_.mkpath(file::to_path(date, sort_mode_));
     }
 
-    for (ExportFile& file_to_copy : files_to_copy_) {
+    for (file::Entry& file_to_copy : context.files_to_copy) {
         if (static_cast<bool>(cancelled_.loadRelaxed())) {
             return;
         }
 
         QString file_name = file_to_copy.info.fileName();
-        QFileInfo export_file_info(export_dir_.absolutePath() + file_to_copy.date.to_qstring() +
-                                   "/" + file_name);
+        QFileInfo destination_file_info(destination_dir_.filePath(
+            file::to_path(file_to_copy.date, sort_mode_) + "/" + file_name));
 
         int count = 0;
         bool copy = false;
 
-        if (export_file_info.exists()) {
+        if (destination_file_info.exists()) {
             int index = static_cast<int>(file_name.lastIndexOf("."));
             QString name = file_name.left(index);
             QString extension = file_name.right(file_name.size() - index);
-            while (export_file_info.exists() && count < name_max_index) {
-                export_file_info.setFile(name + "_" + QString::number(++count) + extension);
+            while (destination_file_info.exists() && count < name_max_index) {
+                destination_file_info.setFile(name + "_" + QString::number(++count) + extension);
             }
         }
 
         if (count < name_max_index) {
-            QFile import_file(file_to_copy.info.absoluteFilePath());
-            QFile export_file(export_file_info.absoluteFilePath());
+            QFile source_file(file_to_copy.info.absoluteFilePath());
+            QFile destination_file(destination_file_info.absoluteFilePath());
 
-            if (import_file.open(QIODevice::ReadOnly) && export_file.open(QIODevice::WriteOnly)) {
-                copy = (export_file.write(import_file.readAll()) >= 0);
+            if (source_file.open(QIODevice::ReadOnly) &&
+                destination_file.open(QIODevice::WriteOnly)) {
+                copy = (destination_file.write(source_file.readAll()) >= 0);
             }
 
-            import_file.close();
-            export_file.close();
+            source_file.close();
+            destination_file.close();
         }
 
         if (copy) {
-            copy_count_++;
-            if (delete_files_) {
-                files_to_delete_.push_back(file_to_copy.info);
+            context.copy_count++;
+            if (remove_files_) {
+                context.files_to_remove.push_back(file_to_copy.info);
             }
-            add_to_progress(copy_progress_);
+            add_to_progress(context.copy_progress);
         } else {
-            import_errors_.insert(file_to_copy.info.absoluteFilePath());
-            add_to_progress(copy_progress_ + delete_progress_);
+            context.source_errors.insert(file_to_copy.info.absoluteFilePath());
+            add_to_progress(context.copy_progress + context.remove_progress);
         }
     }
 }
 
-void FileManager::delete_files() {
-    for (QFileInfo& file_to_delete : files_to_delete_) {
+void FileManager::remove_files(Context& context) {
+    for (QFileInfo& file_to_delete : context.files_to_remove) {
         QFile file(file_to_delete.absoluteFilePath());
         if (file.remove()) {
-            delete_count_++;
+            context.remove_count++;
         } else {
-            import_errors_.insert(file_to_delete.absoluteFilePath());
+            context.source_errors.insert(file_to_delete.absoluteFilePath());
         }
 
-        add_to_progress(delete_progress_);
+        add_to_progress(context.remove_progress);
     }
 }
 
-void FileManager::print_stats() {
-    if (duplicate_count_ > 0) {
+void FileManager::print_stats(Context& context) {
+    if (context.duplicate_count > 0) {
         emit output(
-            "Found " + QString::number(duplicate_count_) +
-            (duplicate_count_ > 1 ? " already existing files." : " already existing file."));
+            "Found " + QString::number(context.duplicate_count) +
+            (context.duplicate_count > 1 ? " already existing files." : " already existing file."));
     }
 
-    emit output(QString::number(copy_count_) +
-                (copy_count_ > 1 ? " files copied." : " file copied."));
+    emit output(QString::number(context.copy_count) +
+                (context.copy_count > 1 ? " files copied." : " file copied."));
 
-    if (delete_count_ > 0) {
-        emit output(QString::number(delete_count_) +
-                    (delete_count_ > 1 ? " files deleted." : " file deleted."));
+    if (context.remove_count > 0) {
+        emit output(QString::number(context.remove_count) +
+                    (context.remove_count > 1 ? " files deleted." : " file deleted."));
     }
 
-    if (export_errors_.size() > 0) {
-        emit output("ERROR : " + QString::number(export_errors_.size()) +
-                    ((export_errors_.size() > 1)
-                         ? " files in export directory could not be read !"
-                         : " file in export directory could not be read !"));
+    if (context.destination_errors.size() > 0) {
+        emit output("ERROR : " + QString::number(context.destination_errors.size()) +
+                    ((context.destination_errors.size() > 1)
+                         ? " files in destination directory could not be read !"
+                         : " file in destination directory could not be read !"));
     }
 
-    if (import_errors_.size() > 0) {
-        emit output("ERROR : " + QString::number(import_errors_.size()) +
-                    ((import_errors_.size() > 1)
-                         ? " files in import directory could not be read !"
-                         : " file in import directory could not be read !"));
+    if (context.source_errors.size() > 0) {
+        emit output("ERROR : " + QString::number(context.source_errors.size()) +
+                    ((context.source_errors.size() > 1)
+                         ? " files in source directory could not be read !"
+                         : " file in source directory could not be read !"));
     }
 
     if (static_cast<bool>(cancelled_.loadRelaxed())) {
@@ -386,6 +387,7 @@ void FileManager::print_elapsed_time(std::chrono::steady_clock::time_point start
                             QString::number(minutes).rightJustified(2, '0') + ":" +
                             QString::number(seconds).rightJustified(2, '0');
     emit output("Elapsed time : " + time_to_print);
+    emit output("");
 }
 
 void FileManager::add_to_progress(int val) {

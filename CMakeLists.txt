@@ -23,14 +23,15 @@ add_executable(PhotoSync WIN32
     src/main.cpp
     src/date_parser.hpp
     src/date_parser.cpp
-    src/file_data.hpp
-    src/file_data.cpp
+    src/file.hpp
+    src/file.cpp
     src/file_manager.hpp
     src/file_manager.cpp
     src/photo_sync.hpp
     src/photo_sync.cpp
     src/settings.hpp
     src/settings.cpp
+    src/sort_mode.hpp
     src/photo_sync.ui
 
     resources/PhotoSync.rc

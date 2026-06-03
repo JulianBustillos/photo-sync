@@ -9,19 +9,19 @@ extern "C" {
 #include <libavutil/dict.h>
 }
 
-bool date_parser::from_jpg_buffer(const QByteArray& buffer, Date& date) {
-    bool date_found = false;
+QDate date_parser::from_jpg_buffer(const QByteArray& buffer) {
     easyexif::EXIFInfo exif_info;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     const auto* data = reinterpret_cast<const unsigned char*>(buffer.constData());
     int parsing_result = exif_info.parseFrom(data, buffer.size());
-    if (parsing_result == PARSE_EXIF_SUCCESS && exif_info.DateTime.size() >= 7) {
-        date.year = std::stoi(exif_info.DateTime.substr(0, 4));
-        date.month = std::stoi(exif_info.DateTime.substr(5, 2));
-        date_found = true;
+    if (parsing_result == PARSE_EXIF_SUCCESS && exif_info.DateTime.size() >= 9) {
+        int year = std::stoi(exif_info.DateTime.substr(0, 4));
+        int month = std::stoi(exif_info.DateTime.substr(5, 2));
+        int day = std::stoi(exif_info.DateTime.substr(7, 2));
+        return {year, month, day};
     }
 
-    return date_found;
+    return {};
 }
 
 struct BufferData {
@@ -44,7 +44,7 @@ static int read_packet(void* opaque, uint8_t* buf, int buf_size) {
     return buf_size;
 }
 
-bool date_parser::from_mp4_buffer(const QByteArray& buffer, Date& date) {
+QDate date_parser::from_mp4_buffer(const QByteArray& buffer) {
     bool date_found = false;
     AVFormatContext* fmt_ctx = nullptr;
     AVIOContext* avio_ctx = nullptr;
@@ -87,14 +87,16 @@ bool date_parser::from_mp4_buffer(const QByteArray& buffer, Date& date) {
         ret = avformat_open_input(&fmt_ctx, nullptr, nullptr, nullptr);
     }
 
+    QDate date;
     if (ret == 0) {
         tag = av_dict_get(fmt_ctx->metadata, "creation_time", tag, AV_DICT_IGNORE_SUFFIX);
         if (tag != nullptr) {
             std::string value = tag->value;
-            if (value.size() >= 7) {
-                date.year = std::stoi(value.substr(0, 4));
-                date.month = std::stoi(value.substr(5, 2));
-                date_found = true;
+            if (value.size() >= 9) {
+                int year = std::stoi(value.substr(0, 4));
+                int month = std::stoi(value.substr(5, 2));
+                int day = std::stoi(value.substr(7, 2));
+                date = QDate(year, month, day);
             }
         }
     }
@@ -106,16 +108,15 @@ bool date_parser::from_mp4_buffer(const QByteArray& buffer, Date& date) {
     }
     avio_context_free(&avio_ctx);
 
-    return date_found;
+    return date;
 }
 
-bool date_parser::from_file_name(const std::string& file_name, Date& date) {
-    bool date_found = false;
+QDate date_parser::from_file_name(const std::string& file_name) {
     std::regex date_re(R"((^|[^\d])(\d{8})([^\d]|$))");
     std::smatch match;
 
     for (std::sregex_iterator match_iter(file_name.begin(), file_name.end(), date_re), end;
-         !date_found && match_iter != end;
+         match_iter != end;
          ++match_iter) {
         std::string curr_match = (*match_iter)[2];
         int year = std::stoi(curr_match.substr(0, 4));
@@ -123,11 +124,9 @@ bool date_parser::from_file_name(const std::string& file_name, Date& date) {
         int day = std::stoi(curr_match.substr(6, 2));
 
         if (1900 <= year && 1 <= month && month <= 12 && 1 <= day && day <= 31) {
-            date.year = year;
-            date.month = month;
-            date_found = true;
+            return {year, month, day};
         }
     }
 
-    return date_found;
+    return {};
 }

@@ -1,6 +1,8 @@
 #pragma once
-#include "file_data.hpp"
+
+#include "file.hpp"
 #include "settings.hpp"
+#include "sort_mode.hpp"
 
 #include <QDir>
 #include <QFileInfo>
@@ -37,46 +39,50 @@ signals:
     void output(QString output);
 
 private:
-    static bool is_parsed(const QFileInfo& file_info, Date& date);
+    struct Context {
+        Context(SortMode mode);
+
+        int copy_progress;
+        int remove_progress;
+        int duplicate_count;
+        int copy_count;
+        int remove_count;
+        std::unordered_map<qint64, std::vector<file::Fingerprint>> destination_fingerprints;
+        std::set<QDate, std::function<bool(const QDate&, const QDate&)>> directories_to_create;
+        std::vector<file::Entry> files_to_copy;
+        std::vector<QFileInfo> files_to_remove;
+        std::set<QString> source_errors;
+        std::set<QString> destination_errors;
+    };
+
+    static bool parse_date(const QFileInfo& file_info, QDate& date);
+
+    static const int name_max_index;
 
     void run() override;
 
     bool check_dirs();
-    bool check_delete();
-    void build_existing_file_data();
-    void build_import_file_data();
-    void setup_progress(int nb_import_files);
-    bool already_exists(const QFileInfo& file_info);
-    void export_files();
-    void delete_files();
-    void print_stats();
+    bool check_remove();
+    void collect_destination_fingerprints(Context& context);
+    void collect_source_entries(Context& context);
+    void setup_progress(Context& context, int nb_source_files);
+    bool already_exists(Context& context, const QFileInfo& file_info);
+    void organize_files(Context& context);
+    void remove_files(Context& context);
+    void print_stats(Context& context);
     void print_elapsed_time(std::chrono::steady_clock::time_point start,
                             std::chrono::steady_clock::time_point end);
     void add_to_progress(int val);
 
-    static const int name_max_index;
-
     QStringList extensions_;
-
     QMutex mutex_;
     QWaitCondition condition_;
     QAtomicInt cancelled_;
 
-    QDir import_dir_;
-    QDir export_dir_;
-    bool delete_files_;
-    int run_count_;
+    QDir source_dir_;
+    QDir destination_dir_;
+    SortMode sort_mode_;
+    bool remove_files_;
     int progress_;
-    int copy_progress_;
-    int delete_progress_;
-    std::unordered_map<qint64, std::vector<ExistingFile>> existing_files_;
-    std::set<Date> directories_to_create_;
-    std::vector<ExportFile> files_to_copy_;
-    std::vector<QFileInfo> files_to_delete_;
-    std::set<QString> import_errors_;
-    std::set<QString> export_errors_;
-    int duplicate_count_;
-    int copy_count_;
-    int delete_count_;
     bool status_;
 };

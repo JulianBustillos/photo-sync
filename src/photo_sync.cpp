@@ -9,22 +9,26 @@ PhotoSync::PhotoSync(QWidget* parent)
       settings_(QCoreApplication::applicationDirPath()),
       file_manager_(this) {
     ui_.setupUi(this);
-    ui_.progressBar->setValue(0);
-    ui_.startButton->setText("Start");
+    ui_.sort_mode_combo_box->addItem("Year", static_cast<int>(SortMode::Year));
+    ui_.sort_mode_combo_box->addItem("Year/Month", static_cast<int>(SortMode::YearMonth));
+    ui_.sort_mode_combo_box->addItem("Year/Month/sDay", static_cast<int>(SortMode::YearMonthDay));
+    ui_.progress_bar->setValue(0);
+    ui_.start_button->setText("Start");
 
-    if (settings_.parse_config_file()) {
-        ui_.importEdit->setText(settings_.get_import_path());
-        ui_.exportEdit->setText(settings_.get_export_path());
-        ui_.deleteCheckBox->setChecked(settings_.get_delete_files());
-    }
+    settings_.parse_config_file();
+    ui_.source_edit->setText(settings_.get_source_path());
+    ui_.destination_edit->setText(settings_.get_destination_path());
+    int mode_index = ui_.sort_mode_combo_box->findData(static_cast<int>(settings_.get_sort_mode()));
+    ui_.sort_mode_combo_box->setCurrentIndex(mode_index);
+    ui_.remove_check_box->setChecked(settings_.get_remove_files());
 
-    QObject::connect(ui_.importToolButton, &QToolButton::clicked, this, [&]() {
-        select_directory("Import directory path", *ui_.importEdit);
+    QObject::connect(ui_.source_tool_button, &QToolButton::clicked, this, [&]() {
+        select_directory("Select source folder", *ui_.source_edit);
     });
-    QObject::connect(ui_.exportToolButton, &QToolButton::clicked, this, [&]() {
-        select_directory("Export directory path", *ui_.exportEdit);
+    QObject::connect(ui_.destination_tool_button, &QToolButton::clicked, this, [&]() {
+        select_directory("Select destination folder", *ui_.destination_edit);
     });
-    QObject::connect(ui_.startButton, &QToolButton::clicked, this, &PhotoSync::run);
+    QObject::connect(ui_.start_button, &QToolButton::clicked, this, &PhotoSync::run);
 
     QObject::connect(&file_manager_, &FileManager::warning, this, &PhotoSync::create_warning);
     QObject::connect(
@@ -48,13 +52,14 @@ void PhotoSync::select_directory(const QString& title, QLineEdit& line_edit) {
 }
 
 void PhotoSync::run() {
-    QObject::disconnect(ui_.startButton, nullptr, nullptr, nullptr);
-    QObject::connect(ui_.startButton, &QToolButton::clicked, &file_manager_, &FileManager::cancel);
-    ui_.startButton->setText("Cancel");
+    QObject::disconnect(ui_.start_button, nullptr, nullptr, nullptr);
+    QObject::connect(ui_.start_button, &QToolButton::clicked, &file_manager_, &FileManager::cancel);
+    ui_.start_button->setText("Cancel");
 
-    settings_.set_import_path(ui_.importEdit->text());
-    settings_.set_export_path(ui_.exportEdit->text());
-    settings_.set_delete_files(ui_.deleteCheckBox->isChecked());
+    settings_.set_source_path(ui_.source_edit->text());
+    settings_.set_destination_path(ui_.destination_edit->text());
+    settings_.set_sort_mode(static_cast<SortMode>(ui_.sort_mode_combo_box->currentData().toInt()));
+    settings_.set_remove_files(ui_.remove_check_box->isChecked());
 
     file_manager_.set_settings(settings_);
     file_manager_.start(QThread::NormalPriority);
@@ -72,21 +77,21 @@ void PhotoSync::create_warning(const QString& title, const QString& message, boo
 }
 
 void PhotoSync::set_progress_bar_value(int value) {
-    ui_.progressBar->setValue(value);
+    ui_.progress_bar->setValue(value);
 }
 
 void PhotoSync::set_progress_bar_maximum(int maximum) {
-    ui_.progressBar->setMaximum(maximum);
+    ui_.progress_bar->setMaximum(maximum);
 }
 
 void PhotoSync::append_output(const QString& output) {
-    ui_.textEditOutput->append(output);
+    ui_.output_text_edit->append(output);
 }
 
 void PhotoSync::finish() {
-    QObject::disconnect(ui_.startButton, nullptr, nullptr, nullptr);
-    QObject::connect(ui_.startButton, &QToolButton::clicked, this, &PhotoSync::run);
-    ui_.startButton->setText("Start");
+    QObject::disconnect(ui_.start_button, nullptr, nullptr, nullptr);
+    QObject::connect(ui_.start_button, &QToolButton::clicked, this, &PhotoSync::run);
+    ui_.start_button->setText("Start");
 
     if (file_manager_.get_status()) {
         settings_.export_config_file();

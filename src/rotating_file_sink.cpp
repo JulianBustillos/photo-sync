@@ -54,14 +54,17 @@ namespace logging {
 
         file_.close();
 
-        QFile::remove(file_path_ + "." + QString::number(max_files_));
+        auto rotating_file_path = [&](unsigned int index) -> QString {
+            if (index > 0) {
+                return file_path_ + "." + QString::number(index);
+            }
+            return file_path_;
+        };
 
-        for (int i = max_files_ - 1; i >= 1; --i) {
-            QFile::rename(file_path_ + "." + QString::number(i),
-                          file_path_ + "." + QString::number(i + 1));
+        QFile::remove(rotating_file_path(max_rotation_));
+        for (unsigned int i = max_rotation_; i > 0; --i) {
+            QFile::rename(rotating_file_path(i - 1), rotating_file_path(i));
         }
-
-        QFile::rename(file_path_, file_path_ + ".1");
 
         file_.setFileName(file_path_);
         bool opened = file_.open(QIODevice::WriteOnly | QIODevice::Text);

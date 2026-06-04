@@ -20,7 +20,7 @@ namespace logging {
         QString file_path_;
         QFile file_;
         qint64 max_size_bytes_ = static_cast<qint64>(1 * 1024 * 1024);
-        int max_files_ = 1;
+        unsigned int max_rotation_ = 1;
     };
 
 }

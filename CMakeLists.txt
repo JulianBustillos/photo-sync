@@ -20,13 +20,21 @@ target_include_directories(easyexif PUBLIC
 )
 
 add_executable(PhotoSync WIN32
-    src/main.cpp
+    src/console_log_sink.hpp
+    src/console_log_sink.cpp
     src/date_parser.hpp
     src/date_parser.cpp
     src/file.hpp
     src/file.cpp
     src/file_manager.hpp
     src/file_manager.cpp
+    src/log_init.hpp
+    src/log_init.cpp
+    src/log_record.hpp
+    src/log_sink.hpp
+    src/logger.hpp
+    src/logger.cpp
+    src/main.cpp
     src/photo_sync.hpp
     src/photo_sync.cpp
     src/settings.hpp

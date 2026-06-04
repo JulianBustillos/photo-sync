@@ -6,13 +6,14 @@
 
 #include <QCryptographicHash>
 #include <QDirIterator>
+#include <qlogging.h>
 
 const int FileManager::name_max_index = 100;
 
 FileManager::FileManager(QObject* parent)
     : QThread(parent),
-      extensions_({"*.jpg", "*.jpeg", "*.png", "*.mp4"}),
       cancelled_(static_cast<int>(false)),
+      extensions_({"*.jpg", "*.jpeg", "*.png", "*.mp4"}),
       status_(false),
       sort_mode_(SortMode::YearMonth),
       remove_files_(false),
@@ -90,6 +91,32 @@ bool FileManager::parse_date(const QFileInfo& file_info, QDate& date) {
     return is_valid;
 }
 
+void FileManager::log_elapsed_time(std::chrono::steady_clock::time_point start,
+                                   std::chrono::steady_clock::time_point end) {
+    int elapsed_time = static_cast<int>(
+        std::round(std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+    int hours = 0;
+    int minutes = 0;
+    int seconds = 0;
+
+    if (elapsed_time >= 3600) {
+        hours = elapsed_time / 3600;
+        elapsed_time -= hours * 3600;
+    }
+
+    if (elapsed_time >= 60) {
+        minutes = elapsed_time / 60;
+        elapsed_time -= minutes * 60;
+    }
+
+    seconds = elapsed_time;
+
+    qInfo().noquote() << "Elapsed time : "
+                      << QString::fromStdString(
+                             std::format("{:02}:{:02}:{:02}", hours, minutes, seconds));
+    qInfo() << "";
+}
+
 void FileManager::run() {
     cancelled_.storeRelaxed(static_cast<int>(false));
     progress_ = 0;
@@ -101,8 +128,8 @@ void FileManager::run() {
     if (status_) {
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
-        emit output("Photos to organize: " + source_dir_.absolutePath());
-        emit output("Destination folder: " + destination_dir_.absolutePath());
+        qInfo() << "Photos to organize: " << source_dir_.absolutePath();
+        qInfo() << "Destination folder: " << destination_dir_.absolutePath();
 
         Context context(sort_mode_);
 
@@ -110,10 +137,10 @@ void FileManager::run() {
         collect_source_entries(context);
         organize_files(context);
         remove_files(context);
-        print_stats(context);
+        log_stats(context);
 
         std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
-        print_elapsed_time(start_time, end_time);
+        log_elapsed_time(start_time, end_time);
     }
 
     status_ = status_ && !static_cast<bool>(cancelled_.loadRelaxed());
@@ -326,65 +353,38 @@ void FileManager::remove_files(Context& context) {
     }
 }
 
-void FileManager::print_stats(Context& context) {
+void FileManager::log_stats(Context& context) {
     if (context.duplicate_count > 0) {
-        emit output(
-            "Found " + QString::number(context.duplicate_count) +
-            (context.duplicate_count > 1 ? " already existing files." : " already existing file."));
+        qInfo() << "Found " << context.duplicate_count
+                << (context.duplicate_count > 1 ? " already existing files."
+                                                : " already existing file.");
     }
 
-    emit output(QString::number(context.copy_count) +
-                (context.copy_count > 1 ? " files organized." : " file organized."));
+    qInfo() << context.copy_count
+            << (context.copy_count > 1 ? " files organized." : " file organized.");
 
     if (context.remove_count > 0) {
-        emit output(QString::number(context.remove_count) +
-                    (context.remove_count > 1 ? " files removed." : " file removed."));
+        qInfo() << context.remove_count
+                << (context.remove_count > 1 ? " files removed." : " file removed.");
     }
 
     if (context.destination_errors.size() > 0) {
-        emit output("ERROR : " + QString::number(context.destination_errors.size()) +
-                    ((context.destination_errors.size() > 1)
-                         ? " files in destination directory could not be read !"
-                         : " file in destination directory could not be read !"));
+        qInfo() << "ERROR : " << context.destination_errors.size()
+                << ((context.destination_errors.size() > 1)
+                        ? " files in destination directory could not be read !"
+                        : " file in destination directory could not be read !");
     }
 
     if (context.source_errors.size() > 0) {
-        emit output("ERROR : " + QString::number(context.source_errors.size()) +
-                    ((context.source_errors.size() > 1)
-                         ? " files in source directory could not be read !"
-                         : " file in source directory could not be read !"));
+        qInfo() << "ERROR : " << context.source_errors.size()
+                << ((context.source_errors.size() > 1)
+                        ? " files in source directory could not be read !"
+                        : " file in source directory could not be read !");
     }
 
     if (static_cast<bool>(cancelled_.loadRelaxed())) {
-        emit output("Sync canceled !");
+        qInfo() << "Sync canceled !";
     }
-}
-
-void FileManager::print_elapsed_time(std::chrono::steady_clock::time_point start,
-                                     std::chrono::steady_clock::time_point end) {
-    int elapsed_time = static_cast<int>(
-        std::round(std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-    int hours = 0;
-    int minutes = 0;
-    int seconds = 0;
-
-    if (elapsed_time >= 3600) {
-        hours = elapsed_time / 3600;
-        elapsed_time -= hours * 3600;
-    }
-
-    if (elapsed_time >= 60) {
-        minutes = elapsed_time / 60;
-        elapsed_time -= minutes * 60;
-    }
-
-    seconds = elapsed_time;
-
-    QString time_to_print = QString::number(hours).rightJustified(2, '0') + ":" +
-                            QString::number(minutes).rightJustified(2, '0') + ":" +
-                            QString::number(seconds).rightJustified(2, '0');
-    emit output("Elapsed time : " + time_to_print);
-    emit output("");
 }
 
 void FileManager::add_to_progress(int val) {

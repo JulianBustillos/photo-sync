@@ -1,5 +1,7 @@
 #include "photo_sync.hpp"
 
+#include "console_log_sink.hpp"
+
 #include <QFileDialog>
 #include <QMessageBox>
 
@@ -37,10 +39,13 @@ PhotoSync::PhotoSync(QWidget* parent)
                      &FileManager::progress_bar_maximum,
                      this,
                      &PhotoSync::set_progress_bar_maximum);
-    QObject::connect(&file_manager_, &FileManager::output, this, &PhotoSync::append_output);
     QObject::connect(&file_manager_, &FileManager::finished, this, &PhotoSync::finish);
     QObject::connect(
         this, &PhotoSync::warning_answer, &file_manager_, &FileManager::warning_answer);
+}
+
+void PhotoSync::add_console_log_sink(const logging::ConsoleLogSink& sink) const {
+    QObject::connect(&sink, &logging::ConsoleLogSink::log_received, this, &PhotoSync::append_log);
 }
 
 void PhotoSync::select_directory(const QString& title, QLineEdit& line_edit) {
@@ -84,8 +89,8 @@ void PhotoSync::set_progress_bar_maximum(int maximum) {
     ui_.progress_bar->setMaximum(maximum);
 }
 
-void PhotoSync::append_output(const QString& output) {
-    ui_.output_text_edit->append(output);
+void PhotoSync::append_log(const logging::LogRecord& record) {
+    ui_.log_text_edit->append(record.message);
 }
 
 void PhotoSync::finish() {

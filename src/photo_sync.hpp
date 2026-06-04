@@ -1,5 +1,6 @@
 #pragma once
 
+#include "console_log_sink.hpp"
 #include "file_manager.hpp"
 #include "settings.hpp"
 #include "ui_photo_sync.h"
@@ -13,6 +14,8 @@ class PhotoSync : public QMainWindow {
 public:
     PhotoSync(QWidget* parent = Q_NULLPTR);
 
+    void add_console_log_sink(const logging::ConsoleLogSink& sink) const;
+
 private:
     void select_directory(const QString& title, QLineEdit& line_edit);
     void run();
@@ -21,7 +24,7 @@ private:
     void create_warning(const QString& title, const QString& message, bool emit_answer);
     void set_progress_bar_value(int value);
     void set_progress_bar_maximum(int maximum);
-    void append_output(const QString& output);
+    void append_log(const logging::LogRecord& record);
     void finish();
 
 signals:

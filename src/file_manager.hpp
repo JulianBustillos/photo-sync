@@ -36,7 +36,6 @@ signals:
     void warning(QString title, QString message, bool emit_answer);
     void progress_var_value(int value);
     void progress_bar_maximum(int maximum);
-    void output(QString output);
 
 private:
     struct Context {
@@ -56,6 +55,8 @@ private:
     };
 
     static bool parse_date(const QFileInfo& file_info, QDate& date);
+    static void log_elapsed_time(std::chrono::steady_clock::time_point start,
+                                 std::chrono::steady_clock::time_point end);
 
     static const int name_max_index;
 
@@ -69,15 +70,14 @@ private:
     bool already_exists(Context& context, const QFileInfo& file_info);
     void organize_files(Context& context);
     void remove_files(Context& context);
-    void print_stats(Context& context);
-    void print_elapsed_time(std::chrono::steady_clock::time_point start,
-                            std::chrono::steady_clock::time_point end);
+    void log_stats(Context& context);
     void add_to_progress(int val);
 
-    QStringList extensions_;
     QMutex mutex_;
     QWaitCondition condition_;
     QAtomicInt cancelled_;
+
+    QStringList extensions_;
 
     QDir source_dir_;
     QDir destination_dir_;

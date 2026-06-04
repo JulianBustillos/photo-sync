@@ -119,7 +119,7 @@
       </property>
       <layout class="QGridLayout" name="SynchronizationLayout">
        <item row="1" column="0">
-        <widget class="QTextEdit" name="output_text_edit">
+        <widget class="QTextEdit" name="log_text_edit">
          <property name="undoRedoEnabled">
           <bool>false</bool>
          </property>

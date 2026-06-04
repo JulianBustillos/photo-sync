@@ -31,6 +31,10 @@ void FileManager::set_settings(const Settings& settings) {
     remove_files_ = settings.get_remove_files();
 }
 
+void FileManager::cancel() {
+    cancelled_.storeRelaxed(static_cast<int>(true));
+}
+
 bool FileManager::get_status() const {
     return status_;
 }
@@ -39,10 +43,6 @@ void FileManager::warning_answer(bool answer) {
     QMutexLocker locker(&mutex_);
     remove_files_ = answer;
     condition_.wakeAll();
-}
-
-void FileManager::cancel() {
-    cancelled_.storeRelaxed(static_cast<int>(true));
 }
 
 FileManager::Context::Context(SortMode mode)

@@ -26,11 +26,11 @@ public:
     FileManager& operator=(FileManager&&) noexcept = delete;
 
     void set_settings(const Settings& settings);
+    void cancel();
     bool get_status() const;
 
     // Qt slots
     void warning_answer(bool answer);
-    void cancel();
 
 signals:
     void warning(QString title, QString message, bool emit_answer);

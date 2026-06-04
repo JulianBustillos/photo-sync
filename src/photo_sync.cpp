@@ -9,7 +9,8 @@ PhotoSync::PhotoSync(QWidget* parent)
     : QMainWindow(parent),
       ui_(),
       settings_(QCoreApplication::applicationDirPath()),
-      file_manager_(this) {
+      file_manager_(this),
+      running_(false) {
     ui_.setupUi(this);
     ui_.sort_mode_combo_box->addItem("Year", static_cast<int>(SortMode::Year));
     ui_.sort_mode_combo_box->addItem("Year/Month", static_cast<int>(SortMode::YearMonth));
@@ -30,7 +31,8 @@ PhotoSync::PhotoSync(QWidget* parent)
     QObject::connect(ui_.destination_tool_button, &QToolButton::clicked, this, [&]() {
         select_directory("Select destination folder", *ui_.destination_edit);
     });
-    QObject::connect(ui_.start_button, &QToolButton::clicked, this, &PhotoSync::run);
+    QObject::connect(
+        ui_.start_button, &QToolButton::clicked, this, &PhotoSync::on_start_button_clicked);
 
     QObject::connect(&file_manager_, &FileManager::warning, this, &PhotoSync::create_warning);
     QObject::connect(
@@ -39,7 +41,7 @@ PhotoSync::PhotoSync(QWidget* parent)
                      &FileManager::progress_bar_maximum,
                      this,
                      &PhotoSync::set_progress_bar_maximum);
-    QObject::connect(&file_manager_, &FileManager::finished, this, &PhotoSync::finish);
+    QObject::connect(&file_manager_, &FileManager::finished, this, &PhotoSync::stop);
     QObject::connect(
         this, &PhotoSync::warning_answer, &file_manager_, &FileManager::warning_answer);
 }
@@ -57,8 +59,7 @@ void PhotoSync::select_directory(const QString& title, QLineEdit& line_edit) {
 }
 
 void PhotoSync::run() {
-    QObject::disconnect(ui_.start_button, nullptr, nullptr, nullptr);
-    QObject::connect(ui_.start_button, &QToolButton::clicked, &file_manager_, &FileManager::cancel);
+    running_ = true;
     ui_.start_button->setText("Cancel");
 
     settings_.set_source_path(ui_.source_edit->text());
@@ -68,6 +69,14 @@ void PhotoSync::run() {
 
     file_manager_.set_settings(settings_);
     file_manager_.start(QThread::NormalPriority);
+}
+
+void PhotoSync::on_start_button_clicked() {
+    if (!running_) {
+        run();
+    } else {
+        file_manager_.cancel();
+    }
 }
 
 void PhotoSync::create_warning(const QString& title, const QString& message, bool emit_answer) {
@@ -93,9 +102,8 @@ void PhotoSync::append_log(const logging::LogRecord& record) {
     ui_.log_text_edit->append(record.message);
 }
 
-void PhotoSync::finish() {
-    QObject::disconnect(ui_.start_button, nullptr, nullptr, nullptr);
-    QObject::connect(ui_.start_button, &QToolButton::clicked, this, &PhotoSync::run);
+void PhotoSync::stop() {
+    running_ = false;
     ui_.start_button->setText("Start");
 
     if (file_manager_.get_status()) {

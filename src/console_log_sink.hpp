@@ -8,12 +8,10 @@
 
 namespace logging {
 
-    class ConsoleLogSink final : public QObject, public LogSink {
+    class ConsoleLogSink final : public LogSink {
         Q_OBJECT
 
     public:
-        explicit ConsoleLogSink(QObject* parent = nullptr);
-
         void write(const LogRecord& record) override;
 
     signals:

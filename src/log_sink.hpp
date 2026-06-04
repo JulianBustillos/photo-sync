@@ -4,9 +4,16 @@
 
 namespace logging {
 
-    class LogSink {
+    class LogSink : public QObject {
+        Q_OBJECT
+
     public:
+        LogSink() : QObject(nullptr) {};
         virtual ~LogSink() = default;
+        LogSink(const LogSink&) = delete;
+        LogSink& operator=(const LogSink&) = delete;
+        LogSink(LogSink&&) noexcept = delete;
+        LogSink& operator=(LogSink&&) noexcept = delete;
 
         void set_level(LogLevel level) {
             level_ = level;

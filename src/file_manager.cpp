@@ -114,7 +114,6 @@ void FileManager::log_elapsed_time(std::chrono::steady_clock::time_point start,
     qInfo().noquote() << "Elapsed time : "
                       << QString::fromStdString(
                              std::format("{:02}:{:02}:{:02}", hours, minutes, seconds));
-    qInfo() << "";
 }
 
 void FileManager::run() {

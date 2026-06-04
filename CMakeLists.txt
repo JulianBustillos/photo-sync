@@ -37,6 +37,8 @@ add_executable(PhotoSync WIN32
     src/main.cpp
     src/photo_sync.hpp
     src/photo_sync.cpp
+    src/rotating_file_sink.hpp
+    src/rotating_file_sink.cpp
     src/settings.hpp
     src/settings.cpp
     src/sort_mode.hpp

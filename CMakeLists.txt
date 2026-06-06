@@ -48,12 +48,12 @@ add_executable(PhotoSync WIN32
 )
 
 target_include_directories(PhotoSync PRIVATE
-    C:/SDKs/ffmpeg/include
     src
+    $ENV{FFMPEG_DIR}/include
 )
 
 target_link_directories(PhotoSync PRIVATE
-    C:/SDKs/ffmpeg/lib
+    $ENV{FFMPEG_DIR}/lib
 )
 
 target_link_libraries(PhotoSync PRIVATE

@@ -6,8 +6,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <array>
+#include <qdebug.h>
+#include <qlogging.h>
 
-const QString Settings::config_filename = "Configuration.json";
+const QString Settings::config_filename = "configuration.json";
 const QString Settings::source_key = "SourcePath";
 const QString Settings::destination_key = "DestinationPath";
 const QString Settings::sort_mode_key = "SortMode";
@@ -34,7 +37,7 @@ void Settings::parse_config_file() {
     QJsonDocument doc = QJsonDocument::fromJson(data, &parse_error);
 
     if (parse_error.error != QJsonParseError::NoError) {
-        qWarning() << config_path_ << " JSON parse error:" << parse_error.errorString();
+        qWarning() << config_path_ << " JSON parsing error: " << parse_error.errorString();
         return;
     }
 
@@ -45,10 +48,20 @@ void Settings::parse_config_file() {
 
     QJsonObject obj = doc.object();
 
+    std::array<QString, 4> keys = {source_key, destination_key, sort_mode_key, remove_key};
+    for (auto& key : keys) {
+        if (!obj.contains(key)) {
+            qWarning() << key << " key not found in " << config_path_;
+            return;
+        }
+    }
+
     source_path_ = obj[source_key].toString();
     destination_path_ = obj[destination_key].toString();
     sort_mode_ = static_cast<SortMode>(obj[sort_mode_key].toInt());
     remove_files_ = obj[remove_key].toBool();
+
+    qDebug() << config_path_ << " loaded";
 }
 
 void Settings::export_config_file() const {
@@ -63,12 +76,14 @@ void Settings::export_config_file() const {
     QFile config_file(config_path_);
 
     if (!config_file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qWarning() << config_path_ << " failed to open file for writing";
+        qWarning() << config_path_ << " failed to open for writing";
     }
 
     config_file.write(doc.toJson(QJsonDocument::Indented));
 
     config_file.close();
+
+    qDebug() << config_path_ << " exported";
 }
 
 void Settings::set_source_path(const QString& path) {

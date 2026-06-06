@@ -6,7 +6,7 @@
 namespace logging {
 
     RotatingFileSink::RotatingFileSink(const QString& path)
-        : file_path_(std::move(path + "/PhotoSync_log.txt")), file_(file_path_) {
+        : file_path_(std::move(path + "/log.txt")), file_(file_path_) {
         bool opened = file_.open(QIODevice::Append | QIODevice::Text);
     }
 

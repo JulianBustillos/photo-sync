@@ -22,14 +22,14 @@ private:
 
     // Qt slots
     void on_start_button_clicked();
-    void create_warning(const QString& title, const QString& message, bool emit_answer);
+    void create_warning(const QString& title, const QString& message, bool wait_answer);
     void set_progress_bar_value(int value);
     void set_progress_bar_maximum(int maximum);
     void append_log(const logging::LogRecord& record);
     void stop();
 
 signals:
-    void warning_answer(bool answer);
+    void warning_answer(bool accepted);
 
 private:
     Ui::PhotoSyncClass ui_;

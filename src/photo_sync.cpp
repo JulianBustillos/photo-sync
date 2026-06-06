@@ -43,7 +43,7 @@ PhotoSync::PhotoSync(QWidget* parent)
                      &PhotoSync::set_progress_bar_maximum);
     QObject::connect(&file_manager_, &FileManager::finished, this, &PhotoSync::stop);
     QObject::connect(
-        this, &PhotoSync::warning_answer, &file_manager_, &FileManager::warning_answer);
+        this, &PhotoSync::warning_answer, &file_manager_, &FileManager::set_warning_answer);
 }
 
 void PhotoSync::add_console_log_sink(const logging::ConsoleLogSink& sink) const {
@@ -84,8 +84,8 @@ void PhotoSync::create_warning(const QString& title, const QString& message, boo
         QMessageBox::warning(this,
                              title,
                              message,
-                             emit_answer ? QMessageBox::Ok | QMessageBox::Cancel : QMessageBox::Ok);
-    if (emit_answer) {
+                             wait_answer ? QMessageBox::Ok | QMessageBox::Cancel : QMessageBox::Ok);
+    if (wait_answer) {
         emit warning_answer(button == QMessageBox::Ok);
     }
 }

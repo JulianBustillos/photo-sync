@@ -30,10 +30,10 @@ public:
     bool get_status() const;
 
     // Qt slots
-    void warning_answer(bool answer);
+    void set_warning_answer(bool accepted);
 
 signals:
-    void warning(QString title, QString message, bool emit_answer);
+    void warning(QString title, QString message, bool wait_answser);
     void progress_var_value(int value);
     void progress_bar_maximum(int maximum);
 
@@ -74,8 +74,10 @@ private:
     void add_to_progress(int val);
 
     QMutex mutex_;
-    QWaitCondition condition_;
     QAtomicInt cancelled_;
+    bool waiting_;
+    QWaitCondition wait_condition_;
+    bool answer_;
 
     QStringList extensions_;
 

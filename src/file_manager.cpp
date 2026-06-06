@@ -12,6 +12,8 @@ const int FileManager::name_max_index = 100;
 
 FileManager::FileManager(QObject* parent)
     : QThread(parent),
+      waiting_(false),
+      answer_(false),
       cancelled_(static_cast<int>(false)),
       extensions_({"*.jpg", "*.jpeg", "*.png", "*.mp4"}),
       status_(false),
@@ -39,10 +41,11 @@ bool FileManager::get_status() const {
     return status_;
 }
 
-void FileManager::warning_answer(bool answer) {
+void FileManager::set_warning_answer(bool accepted) {
     QMutexLocker locker(&mutex_);
-    remove_files_ = answer;
-    condition_.wakeAll();
+    answer_ = accepted;
+    waiting_ = false;
+    wait_condition_.wakeOne();
 }
 
 FileManager::Context::Context(SortMode mode)
@@ -171,9 +174,15 @@ bool FileManager::check_dirs() {
 bool FileManager::check_remove() {
     if (remove_files_) {
         QMutexLocker locker(&mutex_);
+        waiting_ = true;
         emit warning(
             "Remove warning", "Files are going to be removed after copy. Proceed anyway ?", true);
-        condition_.wait(&mutex_);
+
+        while (waiting_) {
+            wait_condition_.wait(&mutex_);
+        }
+
+        remove_files_ = answer_;
         return remove_files_;
     }
     return true;

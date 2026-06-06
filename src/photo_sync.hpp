@@ -13,6 +13,11 @@ class PhotoSync : public QMainWindow {
 
 public:
     PhotoSync(QWidget* parent = Q_NULLPTR);
+    ~PhotoSync();
+    PhotoSync(const PhotoSync&) = delete;
+    PhotoSync& operator=(const PhotoSync&) = delete;
+    PhotoSync(PhotoSync&&) noexcept = delete;
+    PhotoSync& operator=(PhotoSync&&) noexcept = delete;
 
     void add_console_log_sink(const logging::ConsoleLogSink& sink) const;
 

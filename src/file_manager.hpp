@@ -60,6 +60,8 @@ private:
 
     static const int name_max_index;
 
+    static void log_stats(Context& context);
+
     void run() override;
 
     bool check_dirs();
@@ -70,7 +72,6 @@ private:
     bool already_exists(Context& context, const QFileInfo& file_info);
     void organize_files(Context& context);
     void remove_files(Context& context);
-    void log_stats(Context& context);
     void add_to_progress(int val);
 
     QMutex mutex_;

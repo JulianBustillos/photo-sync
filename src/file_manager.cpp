@@ -22,7 +22,7 @@ FileManager::FileManager(QObject* parent)
       progress_(0) {}
 
 FileManager::~FileManager() {
-    cancel();
+    cancelled_.storeRelaxed(static_cast<int>(true));
     wait();
 }
 
@@ -35,6 +35,7 @@ void FileManager::set_settings(const Settings& settings) {
 
 void FileManager::cancel() {
     cancelled_.storeRelaxed(static_cast<int>(true));
+    qInfo() << "Sync canceled";
 }
 
 bool FileManager::get_status() const {
@@ -114,12 +115,40 @@ void FileManager::log_elapsed_time(std::chrono::steady_clock::time_point start,
 
     seconds = elapsed_time;
 
-    qInfo().noquote() << "Elapsed time : "
+    qInfo().noquote() << "Elapsed time :"
                       << QString::fromStdString(
                              std::format("{:02}:{:02}:{:02}", hours, minutes, seconds));
 }
 
+void FileManager::log_stats(Context& context) {
+    if (context.duplicate_count > 0) {
+        qInfo() << "Found" << context.duplicate_count << "already existing"
+                << (context.duplicate_count > 1 ? "files" : "file");
+    }
+
+    qInfo() << context.copy_count << (context.copy_count > 1 ? "files" : "file") << "organized";
+
+    if (context.remove_count > 0) {
+        qInfo() << context.remove_count << (context.remove_count > 1 ? "files" : "file")
+                << "removed from source folder";
+    }
+
+    if (context.destination_errors.size() > 0) {
+        qWarning() << "ERROR :" << context.destination_errors.size()
+                   << ((context.destination_errors.size() > 1) ? "files" : "file")
+                   << "in destination directory could not be read !";
+    }
+
+    if (context.source_errors.size() > 0) {
+        qWarning() << "ERROR :" << context.source_errors.size()
+                   << ((context.source_errors.size() > 1) ? "files" : "file")
+                   << "in source directory could not be read !";
+    }
+}
+
 void FileManager::run() {
+    qDebug() << "Start sync";
+
     cancelled_.storeRelaxed(static_cast<int>(false));
     progress_ = 0;
     add_to_progress(0);
@@ -130,8 +159,10 @@ void FileManager::run() {
     if (status_) {
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
-        qInfo() << "Photos to organize: " << source_dir_.absolutePath();
-        qInfo() << "Destination folder: " << destination_dir_.absolutePath();
+        qInfo() << "Source folder:" << source_dir_.absolutePath();
+        qInfo() << "Destination folder:" << destination_dir_.absolutePath();
+        qDebug() << "Sort mode is" << static_cast<int>(sort_mode_);
+        qDebug() << "Source files will be" << ((remove_files_) ? "removed" : "kept");
 
         Context context(sort_mode_);
 
@@ -146,6 +177,8 @@ void FileManager::run() {
     }
 
     status_ = status_ && !static_cast<bool>(cancelled_.loadRelaxed());
+
+    qDebug() << "End sync";
 }
 
 bool FileManager::check_dirs() {
@@ -199,6 +232,8 @@ void FileManager::collect_destination_fingerprints(Context& context) {
         QFileInfo file_info(iter.next());
         context.destination_fingerprints[file_info.size()].emplace_back(file_info);
     }
+
+    qDebug() << "Destination fingerprints collected";
 }
 
 void FileManager::collect_source_entries(Context& context) {
@@ -233,6 +268,8 @@ void FileManager::collect_source_entries(Context& context) {
             add_to_progress(context.copy_progress);
         }
     }
+
+    qDebug() << "Source entries collected";
 }
 
 void FileManager::setup_progress(Context& context, int nb_source_files) {
@@ -262,6 +299,7 @@ bool FileManager::already_exists(Context& context, const QFileInfo& file_info) {
         QCryptographicHash hash(QCryptographicHash::Md5);
         QFile new_file(file_info.absoluteFilePath());
         if (!new_file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Unable to open" << file_info.absoluteFilePath();
             context.source_errors.insert(file_info.absoluteFilePath());
             add_to_progress(context.copy_progress + context.remove_progress);
             same_file_found = true;
@@ -274,6 +312,7 @@ bool FileManager::already_exists(Context& context, const QFileInfo& file_info) {
                 if (fingerprints.checksum.isEmpty()) {
                     QFile existing_file(fingerprints.info.absoluteFilePath());
                     if (!existing_file.open(QIODevice::ReadOnly)) {
+                        qWarning() << "Unable to open" << fingerprints.info.absoluteFilePath();
                         context.destination_errors.insert(fingerprints.info.absoluteFilePath());
                         continue;
                     }
@@ -346,6 +385,8 @@ void FileManager::organize_files(Context& context) {
             add_to_progress(context.copy_progress + context.remove_progress);
         }
     }
+
+    qDebug() << "Files organized";
 }
 
 void FileManager::remove_files(Context& context) {
@@ -359,40 +400,8 @@ void FileManager::remove_files(Context& context) {
 
         add_to_progress(context.remove_progress);
     }
-}
 
-void FileManager::log_stats(Context& context) {
-    if (context.duplicate_count > 0) {
-        qInfo() << "Found " << context.duplicate_count
-                << (context.duplicate_count > 1 ? " already existing files."
-                                                : " already existing file.");
-    }
-
-    qInfo() << context.copy_count
-            << (context.copy_count > 1 ? " files organized." : " file organized.");
-
-    if (context.remove_count > 0) {
-        qInfo() << context.remove_count
-                << (context.remove_count > 1 ? " files removed." : " file removed.");
-    }
-
-    if (context.destination_errors.size() > 0) {
-        qInfo() << "ERROR : " << context.destination_errors.size()
-                << ((context.destination_errors.size() > 1)
-                        ? " files in destination directory could not be read !"
-                        : " file in destination directory could not be read !");
-    }
-
-    if (context.source_errors.size() > 0) {
-        qInfo() << "ERROR : " << context.source_errors.size()
-                << ((context.source_errors.size() > 1)
-                        ? " files in source directory could not be read !"
-                        : " file in source directory could not be read !");
-    }
-
-    if (static_cast<bool>(cancelled_.loadRelaxed())) {
-        qInfo() << "Sync canceled !";
-    }
+    qDebug() << "Source files removed";
 }
 
 void FileManager::add_to_progress(int val) {

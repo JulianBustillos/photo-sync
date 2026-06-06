@@ -11,6 +11,8 @@ PhotoSync::PhotoSync(QWidget* parent)
       settings_(QCoreApplication::applicationDirPath()),
       file_manager_(this),
       running_(false) {
+    qDebug() << "App launched";
+
     ui_.setupUi(this);
     ui_.sort_mode_combo_box->addItem("Year", static_cast<int>(SortMode::Year));
     ui_.sort_mode_combo_box->addItem("Year/Month", static_cast<int>(SortMode::YearMonth));
@@ -46,6 +48,10 @@ PhotoSync::PhotoSync(QWidget* parent)
         this, &PhotoSync::warning_answer, &file_manager_, &FileManager::set_warning_answer);
 }
 
+PhotoSync::~PhotoSync() {
+    qDebug() << "App closed";
+}
+
 void PhotoSync::add_console_log_sink(const logging::ConsoleLogSink& sink) const {
     QObject::connect(&sink, &logging::ConsoleLogSink::log_received, this, &PhotoSync::append_log);
 }
@@ -79,7 +85,8 @@ void PhotoSync::on_start_button_clicked() {
     }
 }
 
-void PhotoSync::create_warning(const QString& title, const QString& message, bool emit_answer) {
+void PhotoSync::create_warning(const QString& title, const QString& message, bool wait_answer) {
+    qDebug().noquote() << "Create warning:" << title << "/" << message;
     QMessageBox::StandardButton button =
         QMessageBox::warning(this,
                              title,

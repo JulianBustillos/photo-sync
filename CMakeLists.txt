@@ -60,7 +60,73 @@ target_link_libraries(PhotoSync PRIVATE
     Qt6::Core
     Qt6::Widgets
     easyexif
-    avformat
     avcodec
+    avformat
     avutil
 )
+
+install(TARGETS PhotoSync 
+    RUNTIME 
+    DESTINATION PhotoSync
+)
+
+find_program(WINDEPLOYQT_EXECUTABLE
+    NAMES windeployqt
+    HINTS "$ENV{QTDIR}/bin"
+    REQUIRED
+)
+
+install(CODE "
+    execute_process(
+        COMMAND \"${WINDEPLOYQT_EXECUTABLE}\"
+                --release
+                --no-translations
+                --no-compiler-runtime
+                --no-system-d3d-compiler
+                --no-opengl-sw
+                \"\${CMAKE_INSTALL_PREFIX}/PhotoSync/PhotoSync.exe\"
+    )
+")
+
+install(CODE [[
+    file(REMOVE_RECURSE
+        "${CMAKE_INSTALL_PREFIX}/PhotoSync/generic"
+        "${CMAKE_INSTALL_PREFIX}/PhotoSync/imageformats"
+        "${CMAKE_INSTALL_PREFIX}/PhotoSync/networkinformation"
+    )
+
+    file(GLOB DX_FILES
+        "${CMAKE_INSTALL_PREFIX}/PhotoSync/*dxcompiler*.dll"
+        "${CMAKE_INSTALL_PREFIX}/PhotoSync/*dxil*.dll"
+    )
+
+    foreach(f IN LISTS DX_FILES)
+        file(REMOVE "${f}")
+    endforeach()
+
+    message(STATUS "Extra files cleaned !")
+]])
+
+set(FFMPEG_DIR $ENV{FFMPEG_DIR})
+
+file(GLOB FFMPEG_DLLS
+    "${FFMPEG_DIR}/bin/avcodec-*.dll"
+    "${FFMPEG_DIR}/bin/avformat-*.dll"
+    "${FFMPEG_DIR}/bin/avutil-*.dll"
+    "${FFMPEG_DIR}/bin/swresample-*.dll"
+)
+
+install(FILES ${FFMPEG_DLLS}
+    DESTINATION PhotoSync
+)
+
+install(CODE [[
+    file(ARCHIVE_CREATE
+        WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
+        OUTPUT "PhotoSync.zip"
+        PATHS "PhotoSync"
+        FORMAT zip
+    )
+
+    message(STATUS "${CMAKE_INSTALL_PREFIX}/PhotoSync.zip created !" )
+]])

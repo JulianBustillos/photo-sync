@@ -18,8 +18,7 @@
                 "value": "host=x64"
             },
             "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_PREFIX_PATH": "$env{QTDIR}"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {

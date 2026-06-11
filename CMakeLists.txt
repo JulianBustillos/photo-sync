@@ -70,9 +70,12 @@ install(TARGETS PhotoSync
     DESTINATION PhotoSync
 )
 
+get_target_property(QT_CORE_DLL Qt6::Core IMPORTED_LOCATION)
+get_filename_component(QT_BIN_DIR "${QT_CORE_DLL}" DIRECTORY)
+
 find_program(WINDEPLOYQT_EXECUTABLE
     NAMES windeployqt
-    HINTS "$ENV{QTDIR}/bin"
+    HINTS "$ENV{QT_BIN_DIR}"
     REQUIRED
 )
 

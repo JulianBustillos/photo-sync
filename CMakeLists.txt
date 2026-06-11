@@ -49,11 +49,11 @@ add_executable(PhotoSync WIN32
 
 target_include_directories(PhotoSync PRIVATE
     src
-    $ENV{FFMPEG_DIR}/include
+    $ENV{FFmpeg_DIR}/include
 )
 
 target_link_directories(PhotoSync PRIVATE
-    $ENV{FFMPEG_DIR}/lib
+    $ENV{FFmpeg_DIR}/lib
 )
 
 target_link_libraries(PhotoSync PRIVATE
@@ -110,13 +110,13 @@ install(CODE [[
     message(STATUS "Extra files cleaned !")
 ]])
 
-set(FFMPEG_DIR $ENV{FFMPEG_DIR})
+set(FFmpeg_DIR $ENV{FFmpeg_DIR})
 
 file(GLOB FFMPEG_DLLS
-    "${FFMPEG_DIR}/bin/avcodec-*.dll"
-    "${FFMPEG_DIR}/bin/avformat-*.dll"
-    "${FFMPEG_DIR}/bin/avutil-*.dll"
-    "${FFMPEG_DIR}/bin/swresample-*.dll"
+    "${FFmpeg_DIR}/bin/avcodec-*.dll"
+    "${FFmpeg_DIR}/bin/avformat-*.dll"
+    "${FFmpeg_DIR}/bin/avutil-*.dll"
+    "${FFmpeg_DIR}/bin/swresample-*.dll"
 )
 
 install(FILES ${FFMPEG_DLLS}
